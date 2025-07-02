@@ -1,5 +1,7 @@
 //
 // Esempio di interfacciamento di Kernel da Host per FPGA
+// Il Kernel è una funzione OpenCL eseguita sulla FPGA
+// 
 //
 
 /*******************************************************************************
@@ -62,157 +64,167 @@ ALL TIMES.
 static const int DATA_SIZE = 4096;
 
 static const std::string error_message =
-    "Error: Result mismatch:\n"
-    "i = %d CPU result = %d Device result = %d\n";
+"Error: Result mismatch:\n"
+"i = %d CPU result = %d Device result = %d\n";
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
 
   // TARGET_DEVICE macro needs to be passed from gcc command line
-  if (argc != 2) {
-    std::cout << "Usage: " << argv[0] << " <xclbin>" << std::endl;
-    return EXIT_FAILURE;
-  }
-
-  std::string xclbinFilename = argv[1];
-
-  // Compute the size of array in bytes
-  size_t size_in_bytes = DATA_SIZE * sizeof(int);
-
-  // Creates a vector of DATA_SIZE elements with an initial value of 10 and 32
-  // using customized allocator for getting buffer alignment to 4k boundary
-
-  std::vector<cl::Device> devices;
-  cl::Device device;
-  cl_int err;
-  cl::Context context;
-  cl::CommandQueue q;
-  cl::Kernel krnl_vector_add;
-  cl::Program program;
-  std::vector<cl::Platform> platforms;
-  bool found_device = false;
-
-  // traversing all Platforms To find Xilinx Platform and targeted
-  // Device in Xilinx Platform
-  cl::Platform::get(&platforms);
-  for (size_t i = 0; (i < platforms.size()) & (found_device == false); i++) {
-    cl::Platform platform = platforms[i];
-    std::string platformName = platform.getInfo<CL_PLATFORM_NAME>();
-    if (platformName == "Xilinx") {
-      devices.clear();
-      platform.getDevices(CL_DEVICE_TYPE_ACCELERATOR, &devices);
-      if (devices.size()) {
-        device = devices[0];
-        std::cout << "Device size " << sizeof(device) << std::endl;
-        found_device = true;
-        break;
+   if (argc != 2) {
+      std::cout << "Usage: " << argv[0] << " <xclbin>" << std::endl;
+      return EXIT_FAILURE;
       }
-    }
-  }
-  if (found_device == false) {
-    std::cout << "Error: Unable to find Target Device "
-              << device.getInfo<CL_DEVICE_NAME>() << std::endl;
-    return EXIT_FAILURE;
-  }
 
-  // Creating Context and Command Queue for selected device
-  OCL_CHECK(err, context = cl::Context(device, NULL, NULL, NULL, &err));
-  OCL_CHECK(err, q = cl::CommandQueue(context, device,
-                                      CL_QUEUE_PROFILING_ENABLE, &err));
+   std::string xclbinFilename = argv[1];
 
-  std::cout << "INFO: Reading " << xclbinFilename << std::endl;
-  FILE *fp;
-  if ((fp = fopen(xclbinFilename.c_str(), "r")) == nullptr) {
-    printf("ERROR: %s xclbin not available please build\n",
-           xclbinFilename.c_str());
-    exit(EXIT_FAILURE);
-  }
-  // Load xclbin
-  std::cout << "Loading: '" << xclbinFilename << "'\n";
-  std::ifstream bin_file(xclbinFilename, std::ifstream::binary);
-  bin_file.seekg(0, bin_file.end);
-  unsigned nb = bin_file.tellg();
-  bin_file.seekg(0, bin_file.beg);
-  char *buf = new char[nb];
-  bin_file.read(buf, nb);
+   // Compute the size of array in bytes
+   size_t size_in_bytes = DATA_SIZE * sizeof(int);
 
-  // Creating Program from Binary File
-  cl::Program::Binaries bins;
-  bins.push_back({buf, nb});
-  devices.resize(1);
-  OCL_CHECK(err, program = cl::Program(context, devices, bins, NULL, &err));
+   // Creates a vector of DATA_SIZE elements with an initial value of 10 and 32
+   // using customized allocator for getting buffer alignment to 4k boundary
 
-  // This call will get the kernel object from program. A kernel is an
-  // OpenCL function that is executed on the FPGA.
-  OCL_CHECK(err, krnl_vector_add = cl::Kernel(program, "krnl_vadd", &err));
+   std::vector<cl::Device> devices;
+   cl::Device device;
+   cl_int err;
+   cl::Context context;
+   cl::CommandQueue q;
+   cl::Kernel krnl_vector_add;
+   cl::Program program;
+   std::vector<cl::Platform> platforms;
+   bool found_device = false;
 
-  // These commands will allocate memory on the Device. The cl::Buffer objects
-  // can be used to reference the memory locations on the device.
-  OCL_CHECK(err, cl::Buffer buffer_a(context, CL_MEM_READ_ONLY, size_in_bytes,
-                                     NULL, &err));
-  OCL_CHECK(err, cl::Buffer buffer_b(context, CL_MEM_READ_ONLY, size_in_bytes,
-                                     NULL, &err));
-  OCL_CHECK(err, cl::Buffer buffer_result(context, CL_MEM_WRITE_ONLY,
-                                          size_in_bytes, NULL, &err));
+   // traversing all Platforms To find Xilinx Platform and targeted
+   // Device in Xilinx Platform
+   cl::Platform::get(&platforms);
+   for (size_t i = 0; (i < platforms.size()) & (found_device == false); i++) {
+      cl::Platform platform = platforms[i];
+      std::string platformName = platform.getInfo<CL_PLATFORM_NAME>();
 
-  // set the kernel Arguments
-  int narg = 0;
-  OCL_CHECK(err, err = krnl_vector_add.setArg(narg++, buffer_a));
-  OCL_CHECK(err, err = krnl_vector_add.setArg(narg++, buffer_b));
-  OCL_CHECK(err, err = krnl_vector_add.setArg(narg++, buffer_result));
-  OCL_CHECK(err, err = krnl_vector_add.setArg(narg++, DATA_SIZE));
+      if (platformName == "Xilinx") {
+         devices.clear();
+         platform.getDevices(CL_DEVICE_TYPE_ACCELERATOR, &devices);
 
-  // We then need to map our OpenCL buffers to get the pointers
-  int *ptr_a;
-  int *ptr_b;
-  int *ptr_result;
-  OCL_CHECK(
-      err, ptr_a = (int *)q.enqueueMapBuffer(buffer_a, CL_TRUE, CL_MAP_WRITE, 0,
-                                             size_in_bytes, NULL, NULL, &err));
-  OCL_CHECK(
-      err, ptr_b = (int *)q.enqueueMapBuffer(buffer_b, CL_TRUE, CL_MAP_WRITE, 0,
-                                             size_in_bytes, NULL, NULL, &err));
-  OCL_CHECK(err, ptr_result = (int *)q.enqueueMapBuffer(
-                     buffer_result, CL_TRUE, CL_MAP_READ, 0, size_in_bytes,
-                     NULL, NULL, &err));
+         if (devices.size()) {
+            device = devices[0];
+            std::cout << "Device size " << sizeof(device) << std::endl;
+            found_device = true;
+            break;
+            }
+         }
+      }
+   if (found_device == false) {
+      std::cout << "Error: Unable to find Target Device "
+         << device.getInfo<CL_DEVICE_NAME>() << std::endl;
+      return EXIT_FAILURE;
+      }
 
-  // added marcod
-  auto mdsize = size_in_bytes / sizeof(int);
-  for (int i = 0; i < mdsize; i++)
-    ptr_a[i] = i;
-  for (int i = 0; i < mdsize; i++)
-    ptr_b[i] = mdsize - i;
+   // Creating Context and Command Queue for selected device
+   OCL_CHECK(err, context = cl::Context(device, NULL, NULL, NULL, &err));
+   OCL_CHECK(err, q = cl::CommandQueue(context, device,
+      CL_QUEUE_PROFILING_ENABLE, &err));
 
-  // Data will be migrated to kernel space
-  OCL_CHECK(err, err = q.enqueueMigrateMemObjects({buffer_a, buffer_b},
-                                                  0 /* 0 means from host*/));
+   // Check if xclbin file is provided
+   std::cout << "INFO: Reading " << xclbinFilename << std::endl;
+   FILE* fp;
+   if ((fp = fopen(xclbinFilename.c_str(), "r")) == nullptr) {
+      printf("ERROR: %s xclbin not available please build\n",
+             xclbinFilename.c_str());
+      exit(EXIT_FAILURE);
+      }
 
-  // Launch the Kernel
-  OCL_CHECK(err, err = q.enqueueTask(krnl_vector_add));
+   // Load xclbin
+   std::cout << "Loading: '" << xclbinFilename << "'\n";
+   std::ifstream bin_file(xclbinFilename, std::ifstream::binary);
+   // seekg(0, bin_file.end) posiziona il puntatore alla fine del file
+   bin_file.seekg(0, bin_file.end);
+   unsigned nb = bin_file.tellg();
+   bin_file.seekg(0, bin_file.beg);
+   char* buf = new char[nb];
+   bin_file.read(buf, nb);
 
-  // The result of the previous kernel execution will need to be retrieved in
-  // order to view the results. This call will transfer the data from FPGA to
-  // source_results vector
-  OCL_CHECK(err, q.enqueueMigrateMemObjects({buffer_result},
-                                            CL_MIGRATE_MEM_OBJECT_HOST));
+   // Creating Program from Binary File whch contains the Kernel executable on
+   // the FPGA
+   cl::Program::Binaries bins;
+   bins.push_back({ buf, nb });
+   devices.resize(1);
+   OCL_CHECK(err, program = cl::Program(context, devices, bins, NULL, &err));
 
-  OCL_CHECK(err, q.finish());
+   // This call will get the kernel object from program. A kernel is an
+   // OpenCL function that is executed on the FPGA.
+   OCL_CHECK(err, krnl_vector_add = cl::Kernel(program, "krnl_vadd", &err));
 
-  // Verify the result
-  int match = 0;
-  for (int i = 0; i < DATA_SIZE; i++) {
-    int host_result = ptr_a[i] + ptr_b[i];
-    if (ptr_result[i] != host_result) {
-      printf(error_message.c_str(), i, host_result, ptr_result[i]);
-      match = 1;
-      break;
-    }
-  }
+   // These commands will allocate memory on the Device. The cl::Buffer objects
+   // can be used to reference the memory locations on the device.
+   OCL_CHECK(err, cl::Buffer buffer_a(context, CL_MEM_READ_ONLY, size_in_bytes,
+      NULL, &err));
+   OCL_CHECK(err, cl::Buffer buffer_b(context, CL_MEM_READ_ONLY, size_in_bytes,
+      NULL, &err));
+   OCL_CHECK(err, cl::Buffer buffer_result(context, CL_MEM_WRITE_ONLY,
+      size_in_bytes, NULL, &err));
 
-  OCL_CHECK(err, err = q.enqueueUnmapMemObject(buffer_a, ptr_a));
-  OCL_CHECK(err, err = q.enqueueUnmapMemObject(buffer_b, ptr_b));
-  OCL_CHECK(err, err = q.enqueueUnmapMemObject(buffer_result, ptr_result));
-  OCL_CHECK(err, err = q.finish());
+   // Set the kernel Arguments (buffers for 2 inputs, output data, and the
+   // size of the data to be processed)
+   int narg = 0;
+   OCL_CHECK(err, err = krnl_vector_add.setArg(narg++, buffer_a));
+   OCL_CHECK(err, err = krnl_vector_add.setArg(narg++, buffer_b));
+   OCL_CHECK(err, err = krnl_vector_add.setArg(narg++, buffer_result));
+   OCL_CHECK(err, err = krnl_vector_add.setArg(narg++, DATA_SIZE));
 
-  std::cout << "TEST " << (match ? "FAILED" : "PASSED") << std::endl;
-  return (match ? EXIT_FAILURE : EXIT_SUCCESS);
-}
+   // We then need to map our OpenCL buffers to get the pointers
+   int* ptr_a;
+   int* ptr_b;
+   int* ptr_result;
+   OCL_CHECK(
+       err, ptr_a = (int*)q.enqueueMapBuffer(buffer_a, CL_TRUE, CL_MAP_WRITE, 0,
+          size_in_bytes, NULL, NULL, &err));
+   OCL_CHECK(
+       err, ptr_b = (int*)q.enqueueMapBuffer(buffer_b, CL_TRUE, CL_MAP_WRITE, 0,
+          size_in_bytes, NULL, NULL, &err));
+   OCL_CHECK(err, ptr_result = (int*)q.enqueueMapBuffer(
+      buffer_result, CL_TRUE, CL_MAP_READ, 0, size_in_bytes,
+      NULL, NULL, &err));
+
+   // Initialize the input data
+   // The first vector is initialized with 0, 1, 2, ..., DATA_SIZE-1
+   // The second vector is initialized with DATA_SIZE-1, DATA_SIZE-2, ..., 0
+   // The result vector will contain the sum of the two input vectors
+   auto mdsize = size_in_bytes / sizeof(int);
+   for (int i = 0; i < mdsize; i++)
+      ptr_a[i] = i;
+   for (int i = 0; i < mdsize; i++)
+      ptr_b[i] = mdsize - i;
+
+   // Data will be migrated to kernel space
+   OCL_CHECK(err, err = q.enqueueMigrateMemObjects({ buffer_a, buffer_b },
+      0 /* 0 means from host*/));
+
+   // Launch the Kernel on the FPGA executing the thread that called this function
+   OCL_CHECK(err, err = q.enqueueTask(krnl_vector_add));
+
+   // The result of the previous kernel execution will need to be retrieved in
+   // order to view the results. This call will transfer the data from FPGA to
+   // source_results vector
+   OCL_CHECK(err, q.enqueueMigrateMemObjects({ buffer_result },
+      CL_MIGRATE_MEM_OBJECT_HOST));
+
+   OCL_CHECK(err, q.finish());
+
+   // Verify the result
+   int match = 0;
+   for (int i = 0; i < DATA_SIZE; i++) {
+      int host_result = ptr_a[i] + ptr_b[i];
+      if (ptr_result[i] != host_result) {
+         printf(error_message.c_str(), i, host_result, ptr_result[i]);
+         match = 1;
+         break;
+         }
+      }
+
+   OCL_CHECK(err, err = q.enqueueUnmapMemObject(buffer_a, ptr_a));
+   OCL_CHECK(err, err = q.enqueueUnmapMemObject(buffer_b, ptr_b));
+   OCL_CHECK(err, err = q.enqueueUnmapMemObject(buffer_result, ptr_result));
+   OCL_CHECK(err, err = q.finish());
+
+   std::cout << "TEST " << (match ? "FAILED" : "PASSED") << std::endl;
+   return (match ? EXIT_FAILURE : EXIT_SUCCESS);
+      }  
