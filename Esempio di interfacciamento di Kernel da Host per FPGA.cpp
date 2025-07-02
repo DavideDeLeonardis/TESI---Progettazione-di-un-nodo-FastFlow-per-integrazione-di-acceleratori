@@ -1,3 +1,7 @@
+//
+// Esempio di interfacciamento di Kernel da Host per FPGA
+//
+
 /*******************************************************************************
 Vendor: Xilinx
 Associated Filename: vadd.cpp
