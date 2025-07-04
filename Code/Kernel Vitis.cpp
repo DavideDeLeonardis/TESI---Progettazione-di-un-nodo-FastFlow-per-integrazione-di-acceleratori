@@ -66,8 +66,7 @@ Input Vector 2 from Global Memory --->|             |      |__|
 // TRIPCOUNT identifier
 const int c_size = DATA_SIZE;
 
-static void load_input(uint32_t* in, hls::stream<uint32_t>& inStream,
-                       int size) {
+static void load_input(uint32_t* in, hls::stream<uint32_t>& inStream, int size) {
 mem_rd:
    for (int i = 0; i < size; i++) {
 #pragma HLS LOOP_TRIPCOUNT min = c_size max = c_size
