@@ -145,7 +145,10 @@ int main(int argc, char* argv[]) {
    // Creating Program from Binary File whch contains the Kernel executable on
    // the FPGA
    cl::Program::Binaries bins;
-   bins.push_back({ buf, nb });
+   std::vector<unsigned char> binary_blob(buf, buf + nb);
+
+// 2. inserisci nel container
+   bins.push_back(binary_blob);
    devices.resize(1);
    OCL_CHECK(err, program = cl::Program(context, devices, bins, NULL, &err));
 
