@@ -1,0 +1,32 @@
+FastFlow:
+   https://github.com/fastflow/fastflow
+
+
+Parte di colloquio con l'acceleratore vedi VITIS XILINX:
+	https://docs.amd.com/r/en-US/Vitis-Tutorials-Getting-Started/Vitis-Introduction-and-Getting-Started
+
+
+Per usarla con GPU
+    https://eunomia.dev/en/others/cuda-tutorial/15-opencl-vector-addition/
+
+
+L'account è deleonardis, la macchina è
+	pianosa.di.unipi.it has address 131.114.3.250
+
+
+
+
+Punti chiave da ricordare:
+   Asincronia: la computazione sull’acceleratore non blocca i thread FastFlow grazie alla coppia Producer/Consumer.
+   Overlapping: mentre il kernel n è in esecuzione, il producer può preparare i dati per n + 1 e il consumer può leggere i risultati di n – 1.
+   Portabilità: il flusso è identico per GPU (Apple) e FPGA (Xilinx); cambiano solo le funzioni specifiche usate dentro DeviceAdapter.
+
+
+BLocchi diagramma di sequenza:
+   Upstream FF thread – chiama svc() e spinge i task.
+   ff_node_acc_t (main thread) – riceve e smista (ritorna GO_ON).
+   producerThread – inserisce dati nel device.
+   DeviceAdapter – incapsula OpenCL.
+   OpenCL runtime – lifeline generica (può restare anonima).
+   consumerThread – estrae risultati.
+   Downstream FF thread – riceve output.

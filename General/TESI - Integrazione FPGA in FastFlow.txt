@@ -4,14 +4,3 @@
 Si propone di realizzare un semplice prototipo per l'integrazione di kernel programmati su FPGA Alveo mediante Vitis (sostanzialmente kernel scritti in C/C++) nell'ambiente di programmazione FastFlow. Verranno utilizzati kernel esistenti. 
 
 L'obiettivo della tesi sarà quello di interfacciare i kernel mediante codice OpenCL sfruttando tutte le possibilità offerte da tale ambiente. L'integrazione in FastFlow dovrà permettere di utilizzare sia il classico parallelismo shared memory/thread sulla CPU multicore che l'offloading di computazioni pesanti sull'acceleratore FPGA.
-
-
-
-
-
-
-Punti chiave da ricordare:
-   Asincronia: la computazione sull’acceleratore non blocca i thread FastFlow grazie alla coppia Producer/Consumer.
-   Overlapping: mentre il kernel n è in esecuzione, il producer può preparare i dati per n + 1 e il consumer può leggere i risultati di n – 1.
-   Portabilità: il flusso è identico per GPU (Apple) e FPGA (Xilinx); cambiano solo le funzioni specifiche usate dentro DeviceAdapter.
-
