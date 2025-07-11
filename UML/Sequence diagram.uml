@@ -1,46 +1,59 @@
 @startuml Sequence_FastFlowAccel
-participant Upstream          as "Upstream\nFF thread"
-participant NodeMain          as "ff_node_acc_t\n(main thread)"
-participant ProducerThread    as "producerThread"
-participant Adapter           as "DeviceAdapter"
-participant OCL               as "OpenCL runtime"
-participant ConsumerThread    as "consumerThread"
-participant Downstream        as "Downstream\nFF thread"
+'--- stile minimo ------------------------------------------------------
+skinparam participantFontSize 10
+skinparam sequenceMessageAlign center
+'----------------------------------------------------------------------
 
-== Avvio ==
-Upstream  -> NodeMain    : svc_init()
-activate NodeMain
-NodeMain  -> Adapter     : init()
-NodeMain  -> ProducerThread ++ : spawn()
-NodeMain  -> ConsumerThread ++ : spawn()
-NodeMain  <-- Upstream   : return 0
+'== Partecipanti =======================================================
+participant "Upstream FF\nthread"       as Upstream
+participant "ff_node_acc_t\n(main)"     as Node
+participant "producerThread"            as Prod
+participant "DeviceAdapter"             as Adp
+participant "OpenCL\nruntime"           as OCL
+participant "consumerThread"            as Cons
+participant "Downstream FF\nthread"     as Down
 
-== Loop push task ==
-Upstream  -> NodeMain    : svc(task)
-NodeMain  -> ProducerThread  : inQ_.push(task)
-NodeMain  <-- Upstream   : GO_ON
+'== Start-up ===========================================================
+Upstream -> Node : svc_init()
+activate Node
+Node    -> Adp  : init()
+Node    -> Prod : spawn()         <<create>>
+activate Prod
+Node    -> Cons : spawn()         <<create>>
+activate Cons
+Upstream <-- Node : return 0
 
-== Producer ==
+'== Streaming dei task ================================================
+loop per ogni Task
+  Upstream -> Node : svc(task)
+  Node     -> Prod : inQ_.push(task)
+  Upstream <-- Node : GO_ON
+end
+
+'== Producer loop (device submit) =====================================
 loop while !done_
-  ProducerThread -> Adapter : prepareBuffers(task)
-  ProducerThread -> Adapter : launchKernel(task)
-  Adapter        -> OCL     : enqueueWriteBuffer / kernel / etc.
+  Prod -> Adp : prepareBuffers(task)
+  Adp  -> OCL : enqueueWriteBuffer
+  Prod -> Adp : launchKernel(task)
+  Adp  -> OCL : enqueueNDRangeKernel
 end
 
-== Consumer ==
+'== Consumer loop (device completion) =================================
 loop while !done_ or pending
-  ConsumerThread -> Adapter : waitEvent()
-  Adapter        -> OCL     : enqueueReadBuffer
-  ConsumerThread -> Downstream : outQ_.push(result)
+  Cons -> Adp : waitEvent()
+  Adp  -> OCL : enqueueReadBuffer
+  Cons -> Down : outQ_.push(result)
 end
 
-== Chiusura ==
-Upstream  -> NodeMain    : svc(nullptr) (EOS)
-NodeMain  -> ProducerThread : inQ_.push(nullptr)
-NodeMain  -> ConsumerThread : done_ = true
-ProducerThread -->> NodeMain : join()
-ConsumerThread -->> NodeMain : join()
-NodeMain  -> Adapter     : cleanup()
-NodeMain  --> Upstream   : EOS
-deactivate NodeMain
+'== Shutdown ==========================================================
+Upstream -> Node : svc(nullptr) / EOS
+Node -> Prod : inQ_.push(nullptr)
+Node -> Cons : done_ = true
+Prod --> Node : join()
+deactivate Prod
+Cons --> Node : join()
+deactivate Cons
+Node -> Adp : cleanup()
+Upstream <-- Node : EOS
+deactivate Node
 @enduml
