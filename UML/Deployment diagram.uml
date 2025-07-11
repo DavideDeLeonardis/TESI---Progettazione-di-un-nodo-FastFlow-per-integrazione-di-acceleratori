@@ -1,0 +1,25 @@
+@startuml Deployment_FastFlowAccel
+'--- NODE MAC ---------------------------------------------------------
+node "MacBook Pro M2" as Mac {
+  artifact "Application\n(DEVICE=gpu)"
+  component "FastFlow"
+  component "ff_node_acc_t"
+  component "GpuAdapter"
+  artifact "OpenCL runtime"
+  node "GPU (Apple M2)" as GPU
+}
+
+'--- NODE VM + FPGA ---------------------------------------------------
+node "Linux VM\nPCIe Alveo U50" as VM {
+  artifact "Application\n(DEVICE=fpga)"
+  component "FastFlow"
+  component "ff_node_acc_t"
+  component "FpgaAdapter"
+  artifact "XRT 2.16"
+  node "FPGA U50\n(vecadd_u50.xclbin)" as FPGA
+}
+
+'--- Optional note ----------------------------------------------------
+Mac -- VM : scp / rsync (.xclbin, binaries)\nSSH
+
+@enduml

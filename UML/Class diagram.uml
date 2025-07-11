@@ -1,0 +1,58 @@
+@startuml ClassDiagram_FastFlowAccel
+'--- STYLE -------------------------------------------------------------
+skinparam classAttributeIconSize 0
+skinparam classFontSize 10
+skinparam classAttributeFontSize 9
+skinparam classOperationFontSize 9
+'----------------------------------------------------------------------
+
+'== Classi principali =================================================
+abstract class DeviceAdapter {
+  + context : cl::Context
+  + queue   : cl::CommandQueue
+  + kernel  : cl::Kernel
+  --
+  + init()
+  + prepareBuffers(task)
+  + launchKernel(task)
+  + cleanup()
+}
+
+class GpuAdapter {
+  + buildFromSource(src)
+}
+
+class FpgaAdapter {
+  + loadXclbin(file)
+}
+
+class "ff::SPSCQueue<T>" as SPSCQueue <<template>>
+
+class ff_node_acc_t {
+  - adapter_  : DeviceAdapter*
+  - inQ_      : SPSCQueue*
+  - outQ_     : SPSCQueue*
+  - done_     : std::atomic<bool>
+  - prodTh_   : std::thread
+  - consTh_   : std::thread
+  --
+  + svc_init()
+  + svc(void*)
+  + svc_end()
+}
+
+class Task
+class Result
+
+'== Relazioni =========================================================
+DeviceAdapter <|-- GpuAdapter
+DeviceAdapter <|-- FpgaAdapter
+
+ff_node_acc_t *-- DeviceAdapter
+ff_node_acc_t *-- SPSCQueue : inQ_
+ff_node_acc_t *-- SPSCQueue : outQ_
+
+Task --> DeviceAdapter : uses
+Result --> ff_node_acc_t : producedBy
+
+@enduml

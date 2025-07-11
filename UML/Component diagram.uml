@@ -1,0 +1,20 @@
+@startuml Component_FastFlowAccel
+'[Component style]
+skinparam componentStyle rectangle
+
+component Application
+component "FastFlow runtime" as FastFlow
+component "ff_node_acc_t"    as AccNode
+component DeviceAdapter
+component "OpenCL ICD Loader" as ICD
+component "GPU Driver"        as GPUDrv
+component "Xilinx Runtime\n(XRT)" as XRT
+
+'[Dependencies]
+Application --> FastFlow      : uses
+Application --> AccNode       : creates
+AccNode     --> DeviceAdapter : requires
+DeviceAdapter --> ICD         : calls
+ICD --> GPUDrv                : on macOS build
+ICD --> XRT                    : on fpga build
+@enduml
