@@ -1,14 +1,26 @@
 #pragma once
-#include "../include/types.hpp"
+#include <ff/buffer.hpp>
 #include <ff/node.hpp>
+#include <thread>
+#include "../include/types.hpp"
+
+// class ff_node_acc_t : public ff::ff_node {
+//  public:
+//    ff_node_acc_t() = default;
+//    ~ff_node_acc_t() noexcept override = default;
+
+//    int svc_init() override;
+//    void *svc(void *t) override;
+//    void svc_end() override;
+
+//  private:
+//    ff::SWSR_Ptr_Buffer *inQ_{nullptr};
+//    std::thread prodTh_;
+
+//    void producerLoop();
+// };
 
 class ff_node_acc_t : public ff::ff_node {
  public:
-   ff_node_acc_t() = default;
-   ~ff_node_acc_t() = default;
-
-   // FastFlow lifecycle
-   int svc_init() override;        // (vuoto per CPU)
-   void *svc(void *task) override; // somma vettoriale
-   void svc_end() override;        // (vuoto per CPU)
+   void *svc(void *t) override;
 };

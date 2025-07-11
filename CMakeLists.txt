@@ -12,7 +12,6 @@ include_directories(
 add_executable(tesi-cpu-baseline-exec
     src/main.cpp
     src/ff_node_acc_t.cpp
-    src/ff_fastflow_patch.cpp
 )
 
 enable_testing()

@@ -29,3 +29,14 @@ mkdir build && cd build
 cmake ..
 cmake --build .
 ./tesi-cpu-baseline-exec
+
+
+
+// CPU Baseline misurations (compute vs end-to-end) => overlap ≈ 0
+--------------------------------------------------------------------------|
+Commands                               |   compute      |     elapsed     |
+--------------------------------------------------------------------------|
+./tesi-cpu-baseline-exec               |   2844 µs      |     3784 µs     |
+./tesi-cpu-baseline-exec 16777216      |   48991 µs     |     49869 µs    |
+./tesi-cpu-baseline-exec 67108864      |   285989 µs    |     286976 µs   |
+--------------------------------------------------------------------------|
