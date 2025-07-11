@@ -1,0 +1,8 @@
+BLocchi diagramma di sequenza:
+   Upstream FF thread – chiama svc() e spinge i task.
+   ff_node_acc_t (main thread) – riceve e smista (ritorna GO_ON).
+   producerThread – inserisce dati nel device.
+   DeviceAdapter – incapsula OpenCL.
+   OpenCL runtime – lifeline generica (può restare anonima).
+   consumerThread – estrae risultati.
+   Downstream FF thread – riceve output.

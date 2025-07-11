@@ -1,0 +1,96 @@
+#include <cassert>
+#include <chrono>
+#include <ff/pipeline.hpp>
+#include <iostream>
+#include <vector>
+
+#include "ff_node_acc_t.hpp"
+#include "../include/types.hpp"
+
+using namespace std::chrono;
+
+// ------------------------- Emitter -------------------------------
+class Emitter : public ff::ff_node {
+ public:
+   explicit Emitter(size_t n) : n_(n), sent_(false) {
+      a_.resize(n_);
+      b_.resize(n_);
+      c_.resize(n_);
+      for (size_t i = 0; i < n_; ++i) {
+         a_[i] = static_cast<int>(i);
+         b_[i] = static_cast<int>(2 * i);
+      }
+      task_.a = a_.data();
+      task_.b = b_.data();
+      task_.c = c_.data();
+      task_.n = n_;
+   }
+   void *svc(void *) override {
+      if (sent_)
+         return EOS;
+      sent_ = true;
+      return &task_;
+   }
+
+   // --- GETTER ripristinati ------------------------------------
+   const std::vector<int> &getA() const { return a_; }
+   const std::vector<int> &getB() const { return b_; }
+   std::vector<int> &getC() { return c_; }
+
+ private:
+   size_t n_;
+   bool sent_;
+   std::vector<int> a_, b_, c_;
+   Task task_{};
+};
+
+// ------------------------- Collector -----------------------------
+class Collector : public ff::ff_node {
+ public:
+   Collector(const std::vector<int> &a, const std::vector<int> &b,
+             std::vector<int> &c)
+       : a_(a), b_(b), c_(c) {}
+
+   void *svc(void *r) override {
+      if (!r)
+         return EOS;
+      auto *res = static_cast<Result *>(r);
+
+      bool ok = true;
+      for (size_t i = 0; i < res->n; i += res->n / 16 + 1)
+         if (c_[i] != a_[i] + b_[i]) {
+            ok = false;
+            break;
+         }
+
+      std::cout << (ok ? "CPU baseline OK" : "Baseline FAILED") << '\n';
+      delete res;
+      return EOS;
+   }
+
+ private:
+   const std::vector<int> &a_;
+   const std::vector<int> &b_;
+   std::vector<int> &c_;
+};
+
+// --------------------------- main --------------------------------
+int main(int argc, char *argv[]) {
+   const size_t N = (argc > 1) ? std::stoull(argv[1]) : 1'000'000;
+
+   Emitter emitter(N);
+   ff_node_acc_t accNode;
+   Collector collector(emitter.getA(), emitter.getB(), emitter.getC());
+
+   ff::ff_Pipe<> pipe(emitter, accNode, collector);
+
+   auto t0 = high_resolution_clock::now();
+   if (pipe.run_and_wait_end() < 0) {
+      std::cerr << "Error running pipeline\n";
+      return -1;
+   }
+   auto t1 = high_resolution_clock::now();
+   auto ms = duration_cast<milliseconds>(t1 - t0).count();
+   std::cout << "N=" << N << " elements, elapsed=" << ms << " ms\n";
+   return 0;
+}

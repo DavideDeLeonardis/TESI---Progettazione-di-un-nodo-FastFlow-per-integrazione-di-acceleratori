@@ -1,0 +1,7 @@
+BasedOnStyle: LLVM            # punto di partenza
+IndentWidth: 3                # ← 3 spazi per livello
+ContinuationIndentWidth: 3    # ← facoltativo ma consigliato
+BreakBeforeBraces: Custom
+BraceWrapping:
+  IndentBraces: false         # graffe a colonna 0
+UseTab: Never                 # forza gli spazi (opzionale)
