@@ -1,69 +1,109 @@
 #include "ff_node_acc_t.hpp"
-#include <algorithm>
-#include <chrono>
-#include <ff/node.hpp>
-#include <iostream>
 
-void *ff_node_acc_t::svc(void *t) {
-   if (t == EOS)
-      return EOS;
+// 1) svc_init: alloca le queue e parte coi thread
+int ff_node_acc_t::svc_init() {
+   // due slot bastano: uno per il Task, uno per il sentinel
+   inQ_ = new TaskQ(2);
+   outQ_ = new ResultQ(2);
 
-   using clock = std::chrono::steady_clock;
-   auto *task = static_cast<Task *>(t);
+   std::cerr << "[svc_init] inQ_=" << inQ_ << "  outQ_=" << outQ_
+             << "  sizeof(*inQ_)=" << sizeof(*inQ_) << std::endl;
+   std::cerr.flush();
 
-   const auto c0 = clock::now();
-   std::transform(task->a, task->a + task->n, task->b, task->c,
-                  [](int x, int y) { return x + y; });
-   const auto c1 = clock::now();
+   // lancio subito i due thread di producer/consumer
+   prodTh_ = std::thread(&ff_node_acc_t::producerLoop, this);
+   consTh_ = std::thread(&ff_node_acc_t::consumerLoop, this);
 
-   using us = std::chrono::microseconds;
-   const auto compute_us = std::chrono::duration_cast<us>(c1 - c0).count();
-
-   std::cout << "compute_us=" << compute_us << " µs\n";
-
-   return new Result{task->c, task->n}; // al Collector
+   std::cerr << "[svc_init] threads started, node @" << this << std::endl;
+   std::cerr.flush();
+   return 0;
 }
 
-// /* ---------- svc_init ---------- */
-// int ff_node_acc_t::svc_init() {
-//    std::cerr << "[init] starting\n";
-//    inQ_ = new ff::SWSR_Ptr_Buffer(64);
-//    assert(inQ_ && "[init] queue alloc failed");
-//    prodTh_ = std::thread(&ff_node_acc_t::producerLoop, this);
-//    return 0; // deve restituire 0
-// }
+// 2) svc: riceve Task* o EOS dal pipeline, li mette in inQ_
+void *ff_node_acc_t::svc(void *t) {
+   std::cerr << "[svc ENTRY] ptr="
+             << (t == EOS ? "EOS" : std::to_string((uintptr_t)t)) << std::endl;
+   std::cerr.flush();
 
-// /* ---------- svc ---------- */
-// void *ff_node_acc_t::svc(void *t) {
-//    if (t == EOS) {         // EOS dall’Emitter
-//       inQ_->push(nullptr); // sentinel
-//       return GO_ON;        // non chiudiamo qui
-//    }
-//    inQ_->push(t);
-//    std::cerr << "[svc] got EOS, pushed sentinel\n";
-//    return GO_ON;
-// }
+   if (t == EOS) {
+      // arriva il “fine‐stream” dall’Emitter: sveglio producerLoop e termino
+      std::cerr << "[svc EOS] pushing nullptr sentinel\n";
+      std::cerr.flush();
+      inQ_->push(nullptr);
+      return EOS;
+   }
+   // è un Task normale: lo accodo e rimango vivo
+   {
+      Task *task = static_cast<Task *>(t);
+      bool ok = inQ_->push(task);
+      std::cerr << "[svc TASK] push(task) ok=" << ok << " ptr=" << task
+                << std::endl;
+      std::cerr.flush();
+      // non dovrebbe mai fallire con capacity=2
+      if (!ok) {
+         while (!inQ_->push(task))
+            std::this_thread::yield();
+      }
+   }
+   return GO_ON;
+}
 
-// /* ---------- producerLoop ---------- */
-// void ff_node_acc_t::producerLoop() {
-//    void *p;
-//    while (true) {
-//       inQ_->pop(&p);
-//       if (!p) {                // sentinel
-//          ff_send_out(nullptr); // UNICO EOS
-//          break;
-//       }
-//       auto *task = static_cast<Task *>(p);
-//       std::transform(task->a, task->a + task->n, task->b, task->c,
-//                      [](int x, int y) { return x + y; });
-//       std::cerr << "[producer] sending EOS\n";
-//       ff_send_out(new Result{task->c, task->n});
-//    }
-// }
+// 3) producerLoop: estrae da inQ_, calcola, inserisce in outQ_
+void ff_node_acc_t::producerLoop() {
+   std::cerr << "[producer@" << this << "] thread start" << std::endl;
+   std::cerr.flush();
 
-// /* ---------- svc_end ---------- */
-// void ff_node_acc_t::svc_end() {
-//    if (prodTh_.joinable())
-//       prodTh_.join(); // ora il producer è già finito
-//    delete inQ_;
-// }
+   void *ptr = nullptr;
+   while (true) {
+      while (!inQ_->pop(&ptr))
+         std::this_thread::yield();
+      std::cerr << "[producer] pop ptr=" << ptr << std::endl;
+      std::cerr.flush();
+
+      if (ptr == nullptr) {
+         // sentinel interno
+         while (!outQ_->push(nullptr))
+            std::this_thread::yield();
+         break;
+      }
+      // compute
+      auto *task = static_cast<Task *>(ptr);
+      std::transform(task->a, task->a + task->n, task->b, task->c,
+                     [](int x, int y) { return x + y; });
+      // push result
+      auto *res = new Result{task->c, task->n};
+      while (!outQ_->push(res))
+         std::this_thread::yield();
+   }
+   std::cerr << "[producer] EXIT\n";
+   std::cerr.flush();
+}
+
+// 4) consumerLoop: estrae da outQ_ e invia al Collector
+void ff_node_acc_t::consumerLoop() {
+   void *ptr;
+   while (true) {
+      while (!outQ_->pop(&ptr))
+         std::this_thread::yield();
+      std::cerr << "[consumer] pop ptr=" << ptr << std::endl;
+      std::cerr.flush();
+      if (ptr == nullptr) {
+         // inoltro l’EOS al Collector e esco
+         ff_send_out(EOS);
+         break;
+      }
+      // altrimenti risultato valido
+      ff_send_out(ptr);
+   }
+}
+
+// 5) svc_end: join dei thread
+void ff_node_acc_t::svc_end() {
+   done_ = true;
+   inQ_->push(nullptr);
+   outQ_->push(nullptr);
+   if (prodTh_.joinable())
+      prodTh_.join();
+   if (consTh_.joinable())
+      consTh_.join();
+}
