@@ -41,13 +41,17 @@ class Collector : public ff::ff_node {
        : a(A), b(B), c(C) {}
 
    void *svc(void *r) override {
-      std::cerr << "[collector] r=" << r << (r == EOS ? " (EOS)" : "")
-                << std::endl;
+      // doppio log su stderr
+      std::cerr << "[collector] svc(r="
+                << (r == EOS ? "EOS" : std::to_string((uintptr_t)r)) << ")\n";
       std::cerr.flush();
 
       if (r == EOS) {
-         return EOS;
+         std::cerr << "[collector] received EOS, terminating\n";
+         std::cerr.flush();
+         return EOS; // chiude la pipeline
       }
+
       auto *res = static_cast<Result *>(r);
       bool ok = true;
       for (size_t i = 0; i < res->n; i += res->n / 16 + 1) {
@@ -56,7 +60,11 @@ class Collector : public ff::ff_node {
             break;
          }
       }
-      std::cout << (ok ? "CPU baseline OK" : "Baseline FAILED") << "\n";
+
+      // stampo su stderr per sicurezza
+      std::cerr << "[collector] result is "
+                << (ok ? "CPU baseline OK" : "Baseline FAILED") << "\n";
+
       delete res;
       return GO_ON;
    }
@@ -74,10 +82,6 @@ int main(int argc, char *argv[]) {
    Emitter emitter(N);
    ff_node_acc_t accNode;
    Collector collector(emitter.getA(), emitter.getB(), emitter.getC());
-
-   std::cerr << "&emitter  =" << &emitter << "\n"
-             << "&accNode =" << &accNode << "\n"
-             << "&collector=" << &collector << "\n";
 
    ff::ff_Pipe<> pipe(false, &emitter, &accNode, &collector);
 
