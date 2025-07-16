@@ -5,7 +5,7 @@
 #include <thread>
 
 /* Nodo accelerato con doppia coda e due thread */
-class ff_node_acc_t : public ff::ff_node {
+class ff_node_acc_t : public ff_node {
  public:
    ff_node_acc_t() = default;
    ~ff_node_acc_t() {
@@ -21,8 +21,8 @@ class ff_node_acc_t : public ff::ff_node {
    void producerLoop();
    void consumerLoop();
 
-   using TaskQ = ff::uSWSR_Ptr_Buffer;
-   using ResultQ = ff::uSWSR_Ptr_Buffer;
+   using TaskQ = uSWSR_Ptr_Buffer;
+   using ResultQ = uSWSR_Ptr_Buffer;
 
    TaskQ *inQ_{nullptr};
    ResultQ *outQ_{nullptr};

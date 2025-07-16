@@ -21,7 +21,7 @@ class Emitter : public ff::ff_node {
          sent = true;
          return &task;
       }
-      return EOS;
+      return FF_EOS;
    }
    const std::vector<int> &getA() const { return a; }
    const std::vector<int> &getB() const { return b; }
@@ -43,13 +43,13 @@ class Collector : public ff::ff_node {
    void *svc(void *r) override {
       // doppio log su stderr
       std::cerr << "[collector] svc(r="
-                << (r == EOS ? "EOS" : std::to_string((uintptr_t)r)) << ")\n";
+                << (r == FF_EOS ? "FF_EOS" : std::to_string((uintptr_t)r)) << ")\n";
       std::cerr.flush();
 
-      if (r == EOS) {
-         std::cerr << "[collector] received EOS, terminating\n";
+      if (r == FF_EOS) {
+         std::cerr << "[collector] received FF_EOS, terminating\n";
          std::cerr.flush();
-         return EOS; // chiude la pipeline
+         return FF_EOS; // chiude la pipeline
       }
 
       auto *res = static_cast<Result *>(r);
@@ -66,7 +66,7 @@ class Collector : public ff::ff_node {
                 << (ok ? "CPU baseline OK" : "Baseline FAILED") << "\n";
 
       delete res;
-      return GO_ON;
+      return FF_GO_ON;
    }
 
  private:

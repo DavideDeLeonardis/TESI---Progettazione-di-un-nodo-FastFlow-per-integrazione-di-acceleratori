@@ -19,16 +19,16 @@ int ff_node_acc_t::svc_init() {
    return 0;
 }
 
-// 2) svc: riceve Task* o EOS, li mette in inQ_, e ritorna GO_ON o EOS
+// 2) svc: riceve Task* o FF_EOS, li mette in inQ_, e ritorna FF_GO_ON o FF_EOS
 void *ff_node_acc_t::svc(void *t) {
-   if (t == EOS) {
-      std::cerr << "[svc] received EOS → pushing sentinel(nullptr) to inQ_\n";
+   if (t == FF_EOS) {
+      std::cerr << "[svc] received FF_EOS → pushing sentinel(nullptr) to inQ_\n";
       while (!inQ_->push(nullptr)) {
-         std::cerr << "[svc] retry EOS push to inQ_\n";
+         std::cerr << "[svc] retry FF_EOS push to inQ_\n";
          std::this_thread::yield();
       }
-      std::cerr << "[svc] EOS pushed, returning EOS\n";
-      return EOS; // <-- qui segnaliamo la fine dello stream
+      std::cerr << "[svc] FF_EOS pushed, returning FF_EOS\n";
+      return FF_EOS; // <-- qui segnaliamo la fine dello stream
    }
    // task “normale”
    auto *task = static_cast<Task *>(t);
@@ -36,7 +36,7 @@ void *ff_node_acc_t::svc(void *t) {
              << " → pushing to inQ_\n";
    while (!inQ_->push(task))
       std::this_thread::yield();
-   return GO_ON;
+   return FF_GO_ON;
 }
 
 // 3a) producerLoop: pop da inQ_, elabora, push in outQ_
@@ -82,7 +82,7 @@ void ff_node_acc_t::producerLoop() {
 }
 
 // 3b) consumerLoop: pop da outQ_, invia tramite ff_send_out, e su sentinel
-// manda EOS
+// manda FF_EOS
 void ff_node_acc_t::consumerLoop() {
    void *ptr = nullptr;
    while (true) {
@@ -92,8 +92,8 @@ void ff_node_acc_t::consumerLoop() {
       std::cerr << "[consumer] popped ptr=" << ptr << "\n";
 
       if (ptr == nullptr) {
-         std::cerr << "[consumer] got sentinel → sending EOS downstream\n";
-         ff_send_out(EOS);
+         std::cerr << "[consumer] got sentinel → sending FF_EOS downstream\n";
+         ff_send_out(FF_EOS);
          break;
       }
 
