@@ -1,10 +1,9 @@
 #include "ff_node_acc_t.hpp"
-#include <algorithm>
 #include <chrono>
 #include <iostream>
 #include <vector>
 
-/* --------------------- Emitter --------------------- */
+/* ------------ Emitter ------------- */
 class Emitter : public ff::ff_node {
  public:
    explicit Emitter(size_t n) : sent(false) {
@@ -12,8 +11,8 @@ class Emitter : public ff::ff_node {
       b.resize(n);
       c.resize(n);
       for (size_t i = 0; i < n; ++i) {
-         a[i] = i;
-         b[i] = 2 * i;
+         a[i] = int(i);
+         b[i] = int(2 * i);
       }
       task = {a.data(), b.data(), c.data(), n};
    }
@@ -34,23 +33,30 @@ class Emitter : public ff::ff_node {
    std::vector<int> a, b, c;
 };
 
-/* --------------------- Collector --------------------- */
+/* ----------- Collector ----------- */
 class Collector : public ff::ff_node {
  public:
    Collector(const std::vector<int> &A, const std::vector<int> &B,
              std::vector<int> &C)
        : a(A), b(B), c(C) {}
+
    void *svc(void *r) override {
-      if (r == EOS)
+      std::cerr << "[collector] r=" << r << (r == EOS ? " (EOS)" : "")
+                << std::endl;
+      std::cerr.flush();
+
+      if (r == EOS) {
          return EOS;
+      }
       auto *res = static_cast<Result *>(r);
       bool ok = true;
-      for (size_t i = 0; i < res->n; i += res->n / 16 + 1)
+      for (size_t i = 0; i < res->n; i += res->n / 16 + 1) {
          if (c[i] != a[i] + b[i]) {
             ok = false;
             break;
          }
-      std::cout << (ok ? "CPU baseline OK" : "Baseline FAILED") << std::endl;
+      }
+      std::cout << (ok ? "CPU baseline OK" : "Baseline FAILED") << "\n";
       delete res;
       return GO_ON;
    }
@@ -61,9 +67,10 @@ class Collector : public ff::ff_node {
    std::vector<int> &c;
 };
 
-/* ------------------------- main ------------------------- */
+/* --------------- main --------------- */
 int main(int argc, char *argv[]) {
-   size_t N = (argc > 1 ? std::stoull(argv[1]) : 1000000);
+   size_t N = (argc > 1 ? std::stoull(argv[1]) : 1'000'000);
+
    Emitter emitter(N);
    ff_node_acc_t accNode;
    Collector collector(emitter.getA(), emitter.getB(), emitter.getC());
