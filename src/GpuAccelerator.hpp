@@ -22,8 +22,6 @@ class GpuAccelerator : public IAccelerator {
    void execute(void *generic_task, long long &computed_us) override;
 
  private:
-   // I membri privati per gestire lo stato di OpenCL.
-   // Questi sono gli stessi che prima erano in ff_node_acc_t.
    cl_context context_{nullptr};
    cl_command_queue queue_{nullptr};
    cl_program program_{nullptr};
