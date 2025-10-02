@@ -1,22 +1,19 @@
+// File: src/ff_node_acc_t.hpp
+
 #pragma once
+
 #include "../include/types.hpp"
+#include "IAccelerator.hpp" // <--- RIGA FONDAMENTALE! Assicurati che ci sia.
 #include "fastflow_includes.hpp"
 #include <atomic>
 #include <iostream>
+#include <memory> // <--- Assicurati che ci sia anche questa.
 #include <thread>
 
-// Includi l'header di OpenCL. La guardia #ifdef è per la portabilità
-#ifdef __APPLE__
-#include <OpenCL/opencl.h>
-#else
-#include <CL/cl.h>
-#endif
-
-/* Nodo accelerato con doppia coda e due thread */
 class ff_node_acc_t : public ff_node {
  public:
-   ff_node_acc_t();
-   ~ff_node_acc_t(); // Useremo il distruttore per la pulizia
+   explicit ff_node_acc_t(std::unique_ptr<IAccelerator> acc);
+   ~ff_node_acc_t() override;
 
    long long getComputeTime_us() const;
 
@@ -29,18 +26,12 @@ class ff_node_acc_t : public ff_node {
    void producerLoop();
    void consumerLoop();
 
-   // --- Membri per OpenCL ---
-   cl_context context_{nullptr};
-   cl_command_queue queue_{nullptr};
-   cl_program program_{nullptr};
-   cl_kernel kernel_{nullptr};
+   std::unique_ptr<IAccelerator> accelerator_;
 
    using TaskQ = uSWSR_Ptr_Buffer;
    using ResultQ = uSWSR_Ptr_Buffer;
-
    TaskQ *inQ_{nullptr};
    ResultQ *outQ_{nullptr};
-
    std::thread prodTh_, consTh_;
    std::atomic<long long> computed_us_{0};
    std::atomic<size_t> inPushed_, inPopped_;

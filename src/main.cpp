@@ -2,6 +2,7 @@
 #include <chrono>
 #include <iostream>
 #include <vector>
+#include "GpuAccelerator.hpp"
 
 /* ------------ Emitter ------------- */
 class Emitter : public ff::ff_node {
@@ -26,8 +27,6 @@ class Emitter : public ff::ff_node {
       // Invia un task finché non abbiamo raggiunto il numero desiderato
       if (tasks_sent < tasks_to_send) {
          tasks_sent++;
-         std::cerr << "[Emitter] Sending task " << tasks_sent << "/"
-                   << tasks_to_send << "\n";
          return &task;
       }
       // Una volta finiti tutti i task, invia il segnale di fine stream
@@ -97,7 +96,12 @@ int main(int argc, char *argv[]) {
 
    // Passiamo NUM_TASKS al costruttore dell'Emitter
    Emitter emitter(N, NUM_TASKS);
-   ff_node_acc_t accNode;
+   // --- MODIFICA CHIAVE ---
+   // 1. Creiamo un'istanza del nostro acceleratore concreto.
+   auto gpu_accelerator = std::make_unique<GpuAccelerator>();
+   // 2. La "iniettiamo" nel costruttore del nodo.
+   ff_node_acc_t accNode(std::move(gpu_accelerator));
+   // -----------------------
    Collector collector(emitter.getA(), emitter.getB(), emitter.getC());
 
    ff::ff_Pipe<> pipe(false, &emitter, &accNode, &collector);

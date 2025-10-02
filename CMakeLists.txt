@@ -12,7 +12,8 @@ add_compile_definitions(FF_HEADER_ONLY NO_DEFAULT_MAPPING)
 # Cambiamo il nome dell'eseguibile in tesi-gpu-exec
 add_executable(tesi-gpu-exec
     src/main.cpp
-    src/ff_node_acc_t.cpp)
+    src/ff_node_acc_t.cpp
+    src/GpuAccelerator.cpp)
 
 # Aggiungiamo gli include per OpenCL
 target_include_directories(tesi-gpu-exec PRIVATE
