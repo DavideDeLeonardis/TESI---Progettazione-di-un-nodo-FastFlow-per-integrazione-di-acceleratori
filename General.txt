@@ -30,16 +30,62 @@ Punti chiave da ricordare:
 
 
 
-// In root:
+// BUILD AND EXEC:
 rm -rf build
 mkdir build && cd build
 cmake ..
 cmake --build .
-./tesi-cpu-baseline-exec
+./tesi-gpu-exec
+
+
+CON 1 TASK:
+      // CPU Baseline misurations (compute vs end-to-end)
+      N=1000000 elapsed=3505 µs, computed=2592 µs
+      N=16777216 elapsed=48578 µs, computed=47575 µs
+      N=67108864 elapsed=195334 µs, computed=194395 µs
+
+
+      // GPU Misurations
+      N=1000000 elapsed=76909 µs, computed=3082 µs
+      N=16777216 elapsed=107509 µs, computed=25200 µs
+      N=67108864 elapsed=256557 µs, computed=162111 µs
 
 
 
-// CPU Baseline misurations (compute vs end-to-end)
-N=1000000 elapsed=3505 µs, computed=2592 µs
-N=16777216 elapsed=48578 µs, computed=47575 µs
-N=67108864 elapsed=195334 µs, computed=194395 µs
+
+CON 100 TASK: il costo di setup dell'acceleratore viene ammortizzato, rendendo la soluzione GPU vincente in uno scenario a throughput elevato => OK!!!!
+   L'overhead medio per task nella versione a 100 task (919 µs) è crollato rispetto a quello del singolo task (73,827 µs). 
+   Questo dimostra numericamente che l'enorme costo di setup iniziale (la compilazione del kernel, etc.) è stato "spalmato" con successo sui 100 task. 
+   L'overhead rimanente è ora praticamente identico a quello della versione CPU, rappresentando il costo "puro" del framework FastFlow.
+
+
+
+
+1. Efficienza della Baseline CPU
+I dati della CPU mostrano che l'overhead di FastFlow è minimo e costante (circa 900-1000 µs). 
+Per problemi grandi, il tempo elapsed è quasi interamente tempo computed. 
+Questo significa che la nostra baseline è solida e il sistema è limitato solo dalla velocità del calcolo (è compute-bound).
+
+
+2. Il Calcolo su GPU non è Sempre Vantaggioso (computed_time)
+Break-Even Point: Per problemi piccoli (N=1M), il computed_time della GPU è peggiore di quello della CPU. 
+Questo è un risultato classico: il tempo risparmiato grazie al parallelismo della GPU è inferiore al tempo speso per trasferire i dati avanti e indietro sulla memoria del dispositivo. 
+Il sistema raggiunge il "break-even" e diventa vantaggioso solo per N sufficientemente grandi.
+
+Scalabilità non Lineare: Lo speedup del calcolo non aumenta linearmente con N. Passando da 16M a 67M elementi, lo speedup diminuisce da 1.89x a 1.20x. Questo è un punto di analisi molto interessante per la tesi. Possibili cause:
+   - Il task (somma vettoriale) è molto semplice e limita la banda di memoria (memory-bound). 
+   Oltre una certa dimensione, sia la CPU che la GPU sono limitate non dalla loro potenza di calcolo, ma dalla velocità con cui possono leggere e scrivere dalla memoria.
+   - La cache della CPU sull'M2 Pro è molto performante e potrebbe mitigare il vantaggio della GPU su problemi così lineari.
+
+
+3. L'Overhead di Inizializzazione Domina il Tempo Totale (elapsed_time)
+Questa è la conclusione più importante di questo esperimento. In tutti i casi, il tempo totale della versione GPU è peggiore di quello della CPU.
+La colonna "Overhead" per la GPU è enorme e relativamente costante (70-95 millisecondi).
+Come avevamo ipotizzato, questo costo è quasi interamente dovuto all'inizializzazione una tantum di OpenCL in svc_init, in particolare alla compilazione JIT (Just-In-Time) del kernel (clBuildProgram).
+Poiché stiamo eseguendo un singolo task, questo costo fisso iniziale non viene mai ammortizzato e domina completamente il tempo di esecuzione totale. 
+
+
+4. Lezione Pratica sulla Legge di Amdahl e l'Ammortamento
+Questi risultati sono una perfetta dimostrazione pratica della Legge di Amdahl. La parte "seriale" del nostro programma (l'inizializzazione di OpenCL) è così lenta che, anche se acceleriamo la parte "parallela" (il calcolo), il guadagno totale è negativo per un singolo task.
+
+Questo dimostra in modo conclusivo che l'offloading su acceleratori ha senso solo in scenari ad alto throughput, dove il costo di setup viene "spalmato" su un gran numero di operazioni.

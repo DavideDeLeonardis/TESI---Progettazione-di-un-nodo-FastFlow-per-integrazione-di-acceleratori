@@ -4,10 +4,11 @@
 #include <vector>
 
 /* ------------ Emitter ------------- */
-// Deve ereditare da ff_node (non ff_node_t)
 class Emitter : public ff::ff_node {
  public:
-   explicit Emitter(size_t n) : sent(false) {
+   // Il costruttore ora accetta anche il numero di task da inviare
+   explicit Emitter(size_t n, size_t num_tasks)
+       : tasks_to_send(num_tasks), tasks_sent(0) {
       a.resize(n);
       b.resize(n);
       c.resize(n);
@@ -15,16 +16,21 @@ class Emitter : public ff::ff_node {
          a[i] = int(i);
          b[i] = int(2 * i);
       }
+      // Prepariamo un singolo "stampo" per il task.
+      // Invieremo il puntatore a questo stesso task più volte.
+      // Funziona perché la pipeline li processa uno alla volta.
       task = {a.data(), b.data(), c.data(), n};
    }
 
-   // Il metodo svc deve tornare a usare void*
    void *svc(void *) override {
-      if (!sent) {
-         sent = true;
+      // Invia un task finché non abbiamo raggiunto il numero desiderato
+      if (tasks_sent < tasks_to_send) {
+         tasks_sent++;
+         std::cerr << "[Emitter] Sending task " << tasks_sent << "/"
+                   << tasks_to_send << "\n";
          return &task;
       }
-      // Non serve più il cast
+      // Una volta finiti tutti i task, invia il segnale di fine stream
       return FF_EOS;
    }
 
@@ -33,43 +39,39 @@ class Emitter : public ff::ff_node {
    std::vector<int> &getC() { return c; }
 
  private:
-   bool sent;
+   size_t tasks_to_send;
+   size_t tasks_sent;
    Task task;
    std::vector<int> a, b, c;
 };
 
 /* ----------- Collector ----------- */
-// Deve ereditare da ff_node (non ff_node_t)
+// La classe Collector non ha bisogno di alcuna modifica.
+// Processerà i risultati man mano che arrivano.
 class Collector : public ff::ff_node {
  public:
    Collector(const std::vector<int> &A, const std::vector<int> &B,
              std::vector<int> &C)
        : a(A), b(B), c(C) {}
 
-   // Il metodo svc deve tornare a usare void* come parametro
    void *svc(void *r) override {
-      std::cerr << "[collector] svc(r=" << (r == FF_EOS ? "FF_EOS" : "Task Ptr")
-                << ")\n";
-      std::cerr.flush();
-
       if (r == FF_EOS) {
-         std::cerr << "[collector] received FF_EOS, terminating\n";
-         std::cerr.flush();
          return FF_EOS;
       }
 
-      // È di nuovo necessario il static_cast da void* a Result*
       auto *res = static_cast<Result *>(r);
       bool ok = true;
+      // La validazione rimane la stessa
       for (size_t i = 0; i < res->n; i += res->n / 16 + 1) {
          if (c[i] != a[i] + b[i]) {
             ok = false;
+            std::cerr << "[collector] VALIDATION FAILED on task result!\n";
             break;
          }
       }
-
-      std::cerr << "[collector] result is "
-                << (ok ? "CPU baseline OK" : "Baseline FAILED") << "\n";
+      if (ok) {
+         std::cerr << "[collector] Task result OK\n";
+      }
 
       delete res;
       return FF_GO_ON;
@@ -83,15 +85,19 @@ class Collector : public ff::ff_node {
 
 /* --------------- main --------------- */
 int main(int argc, char *argv[]) {
+   // Possiamo rendere anche il numero di task un argomento da riga di comando
    size_t N = (argc > 1 ? std::stoull(argv[1]) : 1'000'000);
+   size_t NUM_TASKS = (argc > 2 ? std::stoull(argv[2]) : 100);
 
-   Emitter emitter(N);
-   ff_node_acc_t accNode; // Il nostro nodo che ora misura il tempo
+   std::cout << "Configuration: N=" << N << ", NUM_TASKS=" << NUM_TASKS << "\n";
+
+   // Passiamo NUM_TASKS al costruttore dell'Emitter
+   Emitter emitter(N, NUM_TASKS);
+   ff_node_acc_t accNode;
    Collector collector(emitter.getA(), emitter.getB(), emitter.getC());
 
    ff::ff_Pipe<> pipe(false, &emitter, &accNode, &collector);
 
-   // Misura del tempo ELAPSED (totale)
    auto t0 = std::chrono::steady_clock::now();
    if (pipe.run_and_wait_end() < 0) {
       std::cerr << "run error\n";
@@ -101,12 +107,18 @@ int main(int argc, char *argv[]) {
    auto us_elapsed =
       std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
 
-   // Recupera il tempo COMPUTED dal nodo accelerato
    auto us_computed = accNode.getComputeTime_us();
 
-   // Stampa entrambi i risultati
-   std::cout << "N=" << N << " elapsed=" << us_elapsed << " µs"
-             << ", computed=" << us_computed << " µs\n";
+   // Stampa i risultati, includendo il numero di task
+   std::cout << "-------------------------------------------\n"
+             << "Total time for " << NUM_TASKS << " tasks:\n"
+             << "N=" << N << " elapsed=" << us_elapsed << " µs"
+             << ", computed=" << us_computed << " µs\n"
+             << "-------------------------------------------\n"
+             << "Average time per task:\n"
+             << "Avg elapsed=" << us_elapsed / NUM_TASKS << " µs/task\n"
+             << "Avg computed=" << us_computed / NUM_TASKS << " µs/task\n"
+             << "-------------------------------------------\n";
 
    return 0;
 }
