@@ -5,8 +5,7 @@
 #include <sstream>
 #include <vector>
 
-// Macro semplificata per il controllo degli errori. Nessuna funzione di
-// supporto necessaria.
+// Macro per il controllo degli errori.
 #define OCL_CHECK(call, on_error_action)                                       \
    do {                                                                        \
       cl_int ret = (call);                                                     \
@@ -59,7 +58,7 @@ bool GpuAccelerator::initialize() {
       return false;
    }
 
-   std::ifstream kernelFile("vecAdd.cl");
+   std::ifstream kernelFile("kernel/vecAdd.cl");
    if (!kernelFile.is_open()) {
       std::cerr << "Error: Could not open kernel file vecAdd.cl\n";
       return false;
