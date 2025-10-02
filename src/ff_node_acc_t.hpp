@@ -3,12 +3,17 @@
 #pragma once
 
 #include "../include/types.hpp"
-#include "IAccelerator.hpp" // <--- RIGA FONDAMENTALE! Assicurati che ci sia.
-#include "fastflow_includes.hpp"
+#include "IAccelerator.hpp"
+#include <ff/pipeline.hpp>
+#include <ff/farm.hpp>
+#include <ff/all2all.hpp>
+#include <ff/graph_utils.hpp>
+#include <ff/ubuffer.hpp>
 #include <atomic>
 #include <iostream>
-#include <memory> // <--- Assicurati che ci sia anche questa.
 #include <thread>
+
+using namespace ff;
 
 class ff_node_acc_t : public ff_node {
  public:
@@ -30,9 +35,12 @@ class ff_node_acc_t : public ff_node {
 
    using TaskQ = uSWSR_Ptr_Buffer;
    using ResultQ = uSWSR_Ptr_Buffer;
+
    TaskQ *inQ_{nullptr};
    ResultQ *outQ_{nullptr};
+
    std::thread prodTh_, consTh_;
+   
    std::atomic<long long> computed_us_{0};
    std::atomic<size_t> inPushed_, inPopped_;
    std::atomic<size_t> outPushed_, outPopped_;

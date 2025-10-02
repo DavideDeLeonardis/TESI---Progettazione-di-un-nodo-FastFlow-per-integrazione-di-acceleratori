@@ -24,5 +24,5 @@ class IAccelerator {
 
    // Nota: Non abbiamo bisogno di un metodo 'cleanup()' esplicito perché
    // sfrutteremo il distruttore delle classi concrete (GpuAccelerator, etc.)
-   // per rilasciare le risorse. È un approccio più idiomatico in C++ (RAII).
+   // per rilasciare le risorse.
 };

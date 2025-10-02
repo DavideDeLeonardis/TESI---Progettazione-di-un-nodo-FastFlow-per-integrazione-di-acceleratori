@@ -8,14 +8,11 @@ L'obiettivo della tesi sarà quello di interfacciare i kernel mediante codice Op
 FastFlow:
    https://github.com/fastflow/fastflow
 
-
 Parte di colloquio con l'acceleratore vedi VITIS XILINX:
 	https://docs.amd.com/r/en-US/Vitis-Tutorials-Getting-Started/Vitis-Introduction-and-Getting-Started
 
-
 Per usarla con GPU
     https://eunomia.dev/en/others/cuda-tutorial/15-opencl-vector-addition/
-
 
 L'account è deleonardis, la macchina è
 	pianosa.di.unipi.it has address 131.114.3.250
@@ -89,3 +86,13 @@ Poiché stiamo eseguendo un singolo task, questo costo fisso iniziale non viene 
 Questi risultati sono una perfetta dimostrazione pratica della Legge di Amdahl. La parte "seriale" del nostro programma (l'inizializzazione di OpenCL) è così lenta che, anche se acceleriamo la parte "parallela" (il calcolo), il guadagno totale è negativo per un singolo task.
 
 Questo dimostra in modo conclusivo che l'offloading su acceleratori ha senso solo in scenari ad alto throughput, dove il costo di setup viene "spalmato" su un gran numero di operazioni.
+
+
+
+
+
+
+
+// COMPILAZIONE E LINKING SU FPGA per ottenere xclbin (in Tesi)
+v++ -c -k krnl_vadd --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw -o kernel/krnl_vadd.xo kernel/krnl_vadd.cpp
+v++ -l --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw -o krnl_vadd.xclbin kernel/krnl_vadd.xo
