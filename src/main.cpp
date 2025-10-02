@@ -94,14 +94,9 @@ int main(int argc, char *argv[]) {
 
    std::cout << "Configuration: N=" << N << ", NUM_TASKS=" << NUM_TASKS << "\n";
 
-   // Passiamo NUM_TASKS al costruttore dell'Emitter
    Emitter emitter(N, NUM_TASKS);
-   // --- MODIFICA CHIAVE ---
-   // 1. Creiamo un'istanza del nostro acceleratore concreto.
    auto gpu_accelerator = std::make_unique<GpuAccelerator>();
-   // 2. La "iniettiamo" nel costruttore del nodo.
    ff_node_acc_t accNode(std::move(gpu_accelerator));
-   // -----------------------
    Collector collector(emitter.getA(), emitter.getB(), emitter.getC());
 
    ff::ff_Pipe<> pipe(false, &emitter, &accNode, &collector);
@@ -117,7 +112,6 @@ int main(int argc, char *argv[]) {
 
    auto us_computed = accNode.getComputeTime_us();
 
-   // Stampa i risultati, includendo il numero di task
    std::cout << "-------------------------------------------\n"
              << "Total time for " << NUM_TASKS << " tasks:\n"
              << "N=" << N << " elapsed=" << us_elapsed << " µs"
