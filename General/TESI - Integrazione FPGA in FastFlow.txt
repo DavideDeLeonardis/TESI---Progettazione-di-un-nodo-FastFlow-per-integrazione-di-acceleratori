@@ -1,6 +1,0 @@
-
-// TESI: Integrazione FPGA in FastFlow
-
-Si propone di realizzare un semplice prototipo per l'integrazione di kernel programmati su FPGA Alveo mediante Vitis (sostanzialmente kernel scritti in C/C++) nell'ambiente di programmazione FastFlow. Verranno utilizzati kernel esistenti. 
-
-L'obiettivo della tesi sarà quello di interfacciare i kernel mediante codice OpenCL sfruttando tutte le possibilità offerte da tale ambiente. L'integrazione in FastFlow dovrà permettere di utilizzare sia il classico parallelismo shared memory/thread sulla CPU multicore che l'offloading di computazioni pesanti sull'acceleratore FPGA.

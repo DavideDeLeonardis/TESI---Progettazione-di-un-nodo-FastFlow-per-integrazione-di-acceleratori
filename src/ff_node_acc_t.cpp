@@ -1,9 +1,27 @@
+// File: ff_node_acc_t.cpp
+
 #include "ff_node_acc_t.hpp"
 #include <algorithm>
 #include <iostream>
 #include <thread>
 
-// 1) svc_init: alloco le queue e lancio producer+consumer
+// --- DEFINIZIONE DELLA SENTINELLA ---
+// Inizializziamo il nostro puntatore SENTINEL.
+// Creiamo un oggetto statico fittizio e usiamo il suo indirizzo.
+// Questo garantisce che SENTINEL abbia un valore unico e non nullo.
+static char sentinel_obj;
+void *const ff_node_acc_t::SENTINEL = &sentinel_obj;
+// ------------------------------------
+
+ff_node_acc_t::ff_node_acc_t()
+    : inPushed_(0), inPopped_(0), outPushed_(0), outPopped_(0) {}
+
+ff_node_acc_t::~ff_node_acc_t() {}
+
+long long ff_node_acc_t::getComputeTime_us() const {
+   return computed_us_.load();
+}
+
 int ff_node_acc_t::svc_init() {
    inQ_ = new TaskQ(1024);
    outQ_ = new ResultQ(1024);
@@ -19,108 +37,117 @@ int ff_node_acc_t::svc_init() {
    return 0;
 }
 
-// 2) svc: riceve Task* o FF_EOS, li mette in inQ_, e ritorna FF_GO_ON o FF_EOS
 void *ff_node_acc_t::svc(void *t) {
    if (t == FF_EOS) {
-      std::cerr << "[svc] received FF_EOS → pushing sentinel(nullptr) to inQ_\n";
-      while (!inQ_->push(nullptr)) {
-         std::cerr << "[svc] retry FF_EOS push to inQ_\n";
+      std::cerr << "[svc] received FF_EOS → pushing SENTINEL to inQ_\n";
+      while (!inQ_->push(SENTINEL)) // Usa SENTINEL
          std::this_thread::yield();
-      }
-      std::cerr << "[svc] FF_EOS pushed, returning FF_EOS\n";
-      return FF_EOS; // <-- qui segnaliamo la fine dello stream
+      return FF_GO_ON;
    }
-   // task “normale”
+
    auto *task = static_cast<Task *>(t);
-   std::cerr << "[svc] received TASK ptr=" << task << " n=" << task->n
-             << " → pushing to inQ_\n";
-   while (!inQ_->push(task))
+   std::cerr << "[svc] received TASK ptr=" << task << " n=" << task->n << "\n";
+   while (!inQ_->push(task)) {
+      std::cerr << "[svc] inQ_ full, retrying\n";
       std::this_thread::yield();
+   }
+   std::cerr << "[svc] task pushed to inQ_, returning FF_GO_ON\n";
    return FF_GO_ON;
 }
 
-// 3a) producerLoop: pop da inQ_, elabora, push in outQ_
 void ff_node_acc_t::producerLoop() {
    void *ptr = nullptr;
    while (true) {
       std::cerr << "[producer] waiting for inQ_ pop...\n";
-      while (!inQ_->pop(&ptr))
+      while (!inQ_->pop(&ptr)) {
          std::this_thread::yield();
-      std::cerr << "[producer] popped ptr=" << ptr << "\n";
+      }
+      size_t pc = ++inPopped_;
+      std::cerr << "[producer] popped ptr (inPopped=" << pc << ")\n";
 
-      if (ptr == nullptr) { // sentinel === nullptr
+      if (ptr == SENTINEL) { // Controlla SENTINEL
          std::cerr
-            << "[producer] got sentinel → forwarding sentinel to outQ_\n";
-         while (!outQ_->push(nullptr)) {
-            std::cerr << "[producer] outQ_ full pushing sentinel, retrying\n";
+            << "[producer] got SENTINEL → forwarding SENTINEL to outQ_\n";
+         while (!outQ_->push(SENTINEL)) { // Inoltra SENTINEL
+            std::cerr << "[producer] outQ_ full pushing SENTINEL, retrying\n";
             std::this_thread::yield();
          }
-         std::cerr
-            << "[producer] sentinel pushed to outQ_, exiting producerLoop\n";
+         size_t op = ++outPushed_;
+         std::cerr << "[producer] SENTINEL pushed to outQ_ (outPushed=" << op
+                   << "), exiting producerLoop\n";
          break;
       }
 
       auto *task = static_cast<Task *>(ptr);
-      std::cerr << "[producer] computing task ptr=" << task << " n=" << task->n
-                << "\n";
+      std::cerr << "[producer] computing task n=" << task->n << "\n";
+
+      // --- INIZIO MISURAZIONE ---
+      auto t0 = std::chrono::steady_clock::now();
 
       std::transform(task->a, task->a + task->n, task->b, task->c,
                      [](int x, int y) { return x + y; });
 
+      auto t1 = std::chrono::steady_clock::now();
+      auto us =
+         std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
+      // Aggiungiamo il tempo misurato al totale (operazione atomica)
+      computed_us_ += us;
+      // --- FINE MISURAZIONE ---
+
       auto *res = new Result{task->c, task->n};
-      std::cerr << "[producer] result ready ptr=" << res
-                << " → pushing to outQ_\n";
+      std::cerr << "[producer] result ready\n";
 
       while (!outQ_->push(res)) {
-         std::cerr << "[producer] outQ_ full, retrying push res ptr=" << res
-                   << "\n";
+         std::cerr << "[producer] outQ_ full, retrying push res\n";
          std::this_thread::yield();
       }
-      std::cerr << "[producer] result ptr=" << res << " pushed to outQ_\n";
+      size_t op2 = ++outPushed_;
+      std::cerr << "[producer] result pushed to outQ_ (outPushed=" << op2
+                << ")\n";
    }
    std::cerr << "[producer] exiting\n";
 }
 
-// 3b) consumerLoop: pop da outQ_, invia tramite ff_send_out, e su sentinel
-// manda FF_EOS
 void ff_node_acc_t::consumerLoop() {
    void *ptr = nullptr;
    while (true) {
       std::cerr << "[consumer] waiting for outQ_ pop...\n";
       while (!outQ_->pop(&ptr))
          std::this_thread::yield();
-      std::cerr << "[consumer] popped ptr=" << ptr << "\n";
+      size_t opc = ++outPopped_;
+      std::cerr << "[consumer] popped ptr (outPopped=" << opc << ")\n";
 
-      if (ptr == nullptr) {
-         std::cerr << "[consumer] got sentinel → sending FF_EOS downstream\n";
+      if (ptr == SENTINEL) { // Controlla SENTINEL
+         std::cerr << "[consumer] got SENTINEL → sending FF_EOS downstream\n";
          ff_send_out(FF_EOS);
          break;
       }
 
-      std::cerr << "[consumer] sending result ptr=" << ptr << "\n";
+      std::cerr << "[consumer] sending result downstream\n";
       ff_send_out(ptr);
    }
    std::cerr << "[consumer] exiting\n";
 }
 
-// 4) svc_end: attende la fine di producer + consumer
 void ff_node_acc_t::svc_end() {
+   std::cerr
+      << "[svc_end] Pipeline is shutting down. Signalling internal threads.\n";
 
-   std::cerr << "[svc_end] unblocking internal threads with sentinel\n";
-   // Sblocca producerLoop
-   while (!inQ_->push(nullptr))
-      std::this_thread::yield();
-   // Sblocca consumerLoop
-   while (!outQ_->push(nullptr))
-      std::this_thread::yield();
+   inQ_->push(SENTINEL); // Usa SENTINEL
 
-   std::cerr << "[svc_end] joining internal threads\n";
-
+   std::cerr << "[svc_end] joining producer thread\n";
    if (prodTh_.joinable())
       prodTh_.join();
+   std::cerr << "[svc_end] producer thread joined\n";
 
+   std::cerr << "[svc_end] joining consumer thread\n";
    if (consTh_.joinable())
       consTh_.join();
+   std::cerr << "[svc_end] consumer thread joined\n";
 
-   std::cerr << "[svc_end] all threads terminated\n";
+   std::cerr << "[svc_end] Cleaning up resources.\n";
+   delete inQ_;
+   delete outQ_;
+   inQ_ = nullptr;
+   outQ_ = nullptr;
 }

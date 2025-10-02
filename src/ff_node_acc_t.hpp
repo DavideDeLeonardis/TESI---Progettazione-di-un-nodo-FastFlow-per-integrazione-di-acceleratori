@@ -1,23 +1,25 @@
 #pragma once
 #include "../include/types.hpp"
 #include "fastflow_includes.hpp"
+#include <atomic>
 #include <iostream>
 #include <thread>
 
 /* Nodo accelerato con doppia coda e due thread */
 class ff_node_acc_t : public ff_node {
  public:
-   ff_node_acc_t() = default;
-   ~ff_node_acc_t() {
-      delete inQ_;
-      delete outQ_;
-   }
+   ff_node_acc_t();
+   ~ff_node_acc_t();
 
-   int svc_init() override;     // init code + lancia producer+consumer
-   void *svc(void *t) override; // riceve Task* o EOS
-   void svc_end() override;     // (lasciamo vuoto)
+   long long getComputeTime_us() const;
+
+   int svc_init() override;
+   void *svc(void *t) override;
+   void svc_end() override;
 
  private:
+   static void *const SENTINEL;
+
    void producerLoop();
    void consumerLoop();
 
@@ -28,4 +30,10 @@ class ff_node_acc_t : public ff_node {
    ResultQ *outQ_{nullptr};
 
    std::thread prodTh_, consTh_;
+   std::atomic<bool> done_{false};
+
+   std::atomic<long long> computed_us_{0};
+
+   std::atomic<size_t> inPushed_, inPopped_;
+   std::atomic<size_t> outPushed_, outPopped_;
 };

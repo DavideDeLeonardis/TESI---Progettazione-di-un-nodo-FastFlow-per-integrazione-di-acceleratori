@@ -3,9 +3,7 @@
 
 // Task: puntatori ai tre vettori (host) e dimensione
 struct Task {
-   int *a;
-   int *b;
-   int *c;
+   int *a, *b, *c;
    size_t n;
 };
 
