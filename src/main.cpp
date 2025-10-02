@@ -85,7 +85,11 @@ class Collector : public ff::ff_node {
 
 /* --------------- main --------------- */
 int main(int argc, char *argv[]) {
-   // Possiamo rendere anche il numero di task un argomento da riga di comando
+   // ARGS:
+   // 1: Dimensione degli array da sommare (N)
+   // 2: Numero di task da inviare (NUM_TASKS)
+   // Valori di default: N=1'000'000, NUM_TASKS=100
+
    size_t N = (argc > 1 ? std::stoull(argv[1]) : 1'000'000);
    size_t NUM_TASKS = (argc > 2 ? std::stoull(argv[2]) : 100);
 
