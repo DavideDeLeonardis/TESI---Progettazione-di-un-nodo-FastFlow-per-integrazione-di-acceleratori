@@ -1,5 +1,3 @@
-// File: src/ff_node_acc_t.cpp
-
 #include "ff_node_acc_t.hpp"
 #include <chrono>
 #include <iostream>
@@ -8,20 +6,15 @@
 static char sentinel_obj;
 void *const ff_node_acc_t::SENTINEL = &sentinel_obj;
 
-// COSTRUTTORE
 ff_node_acc_t::ff_node_acc_t(std::unique_ptr<IAccelerator> acc)
-    : accelerator_(std::move(acc)), inPushed_(0), inPopped_(0), outPushed_(0),
-      outPopped_(0) {}
+    : accelerator_(std::move(acc)), computed_us_(0) {}
 
-// DISTRUTTORE
 ff_node_acc_t::~ff_node_acc_t() {}
 
-// GETTER
 long long ff_node_acc_t::getComputeTime_us() const {
    return computed_us_.load();
 }
 
-// SVC_INIT
 int ff_node_acc_t::svc_init() {
    std::cerr << "[svc_init] Initializing accelerator...\n";
    if (!accelerator_ || !accelerator_->initialize()) {
@@ -29,7 +22,6 @@ int ff_node_acc_t::svc_init() {
       return -1;
    }
    std::cerr << "[svc_init] Accelerator initialized successfully.\n";
-
    inQ_ = new TaskQ(1024);
    outQ_ = new ResultQ(1024);
    if (!inQ_->init() || !outQ_->init()) {
@@ -42,14 +34,15 @@ int ff_node_acc_t::svc_init() {
    return 0;
 }
 
-// SVC
 void *ff_node_acc_t::svc(void *t) {
+   std::cerr << "LOG 3: accNode::svc_run() received something\n";
    if (t == FF_EOS) {
-      std::cerr << "[svc] received FF_EOS → pushing SENTINEL to inQ_\n";
+      std::cerr << "LOG 98: accNode received EOS, pushing SENTINEL to inQ\n";
       while (!inQ_->push(SENTINEL))
          std::this_thread::yield();
       return FF_GO_ON;
    }
+   std::cerr << "LOG 4: accNode pushing task to inQ\n";
    auto *task = static_cast<Task *>(t);
    while (!inQ_->push(task)) {
       std::this_thread::yield();
@@ -57,49 +50,59 @@ void *ff_node_acc_t::svc(void *t) {
    return FF_GO_ON;
 }
 
-// PRODUCER LOOP
 void ff_node_acc_t::producerLoop() {
+   std::cerr << "LOG P-A: producerLoop thread started and waiting\n";
    void *ptr = nullptr;
    while (true) {
       while (!inQ_->pop(&ptr)) {
          std::this_thread::yield();
       }
+      std::cerr << "LOG 5: Producer popped something from inQ\n";
 
       if (ptr == SENTINEL) {
+         std::cerr << "LOG P-END: Producer received SENTINEL, forwarding and "
+                      "exiting\n";
          while (!outQ_->push(SENTINEL)) {
             std::this_thread::yield();
          }
          break;
       }
-
       auto *task = static_cast<Task *>(ptr);
+      std::cerr << "LOG P-B: Producer calling accelerator->execute()\n";
       long long current_task_us = 0;
       accelerator_->execute(task, current_task_us);
       computed_us_ += current_task_us;
+      std::cerr << "LOG P-C: Producer returned from accelerator->execute()\n";
 
       auto *res = new Result{task->c, task->n};
+      delete task; // Pulizia memoria del Task
+
       while (!outQ_->push(res)) {
          std::this_thread::yield();
       }
+      std::cerr << "LOG 6: Producer pushed result to outQ\n";
    }
 }
 
-// CONSUMER LOOP
 void ff_node_acc_t::consumerLoop() {
+   std::cerr << "LOG C-A: consumerLoop thread started and waiting\n";
    void *ptr = nullptr;
    while (true) {
       while (!outQ_->pop(&ptr))
          std::this_thread::yield();
+      std::cerr << "LOG C-B: Consumer popped something from outQ\n";
 
       if (ptr == SENTINEL) {
+         std::cerr << "LOG C-END: Consumer received SENTINEL, sending EOS and "
+                      "exiting\n";
          ff_send_out(FF_EOS);
          break;
       }
+      std::cerr << "LOG C-C: Consumer calling ff_send_out() with a result\n";
       ff_send_out(ptr);
    }
 }
 
-// SVC_END
 void ff_node_acc_t::svc_end() {
    std::cerr
       << "[svc_end] Pipeline is shutting down. Signalling internal threads.\n";
