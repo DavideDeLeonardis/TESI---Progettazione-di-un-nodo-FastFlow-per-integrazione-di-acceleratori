@@ -2,7 +2,9 @@
 #include <chrono>
 #include <iostream>
 #include <vector>
+#include "CpuAccelerator.hpp"
 #include "GpuAccelerator.hpp"
+#include "FpgaAccelerator.hpp"
 
 /* ------------ Emitter ------------- */
 class Emitter : public ff::ff_node {
@@ -85,18 +87,34 @@ class Collector : public ff::ff_node {
 /* --------------- main --------------- */
 int main(int argc, char *argv[]) {
    // ARGS:
-   // 1: Dimensione degli array da sommare (N)
-   // 2: Numero di task da inviare (NUM_TASKS)
-   // Valori di default: N=1'000'000, NUM_TASKS=100
+   // 1: Dimensione Vettore (N)          (default: 1'000'000)
+   // 2: Numero di Task (NUM_TASKS)      (default: 100)
+   // 3: Device ('cpu', 'gpu' o 'fpga')  (default: 'cpu')
 
    size_t N = (argc > 1 ? std::stoull(argv[1]) : 1'000'000);
    size_t NUM_TASKS = (argc > 2 ? std::stoull(argv[2]) : 100);
+   std::string device_type = (argc > 3 ? argv[3] : "cpu");
 
-   std::cout << "Configuration: N=" << N << ", NUM_TASKS=" << NUM_TASKS << "\n";
+   std::cout << "Configuration: N=" << N << ", NUM_TASKS=" << NUM_TASKS
+             << ", Device=" << device_type << "\n";
 
    Emitter emitter(N, NUM_TASKS);
-   auto gpu_accelerator = std::make_unique<GpuAccelerator>();
-   ff_node_acc_t accNode(std::move(gpu_accelerator));
+
+   std::unique_ptr<IAccelerator> accelerator;
+
+   if (device_type == "fpga") {
+      std::cout << "Using FPGA Accelerator...\n";
+      accelerator = std::make_unique<FpgaAccelerator>();
+   } else if (device_type == "gpu") {
+      std::cout << "Using GPU Accelerator...\n";
+      accelerator = std::make_unique<GpuAccelerator>();
+   } else {
+      std::cout << "Using CPU Accelerator...\n";
+      accelerator = std::make_unique<CpuAccelerator>();
+   }
+
+   ff_node_acc_t accNode(std::move(accelerator));
+
    Collector collector(emitter.getA(), emitter.getB(), emitter.getC());
 
    ff::ff_Pipe<> pipe(false, &emitter, &accNode, &collector);

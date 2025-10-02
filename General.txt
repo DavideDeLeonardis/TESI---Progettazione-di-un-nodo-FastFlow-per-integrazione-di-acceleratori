@@ -95,3 +95,16 @@ Questo dimostra in modo conclusivo che l'offloading su acceleratori ha senso sol
 // COMPILAZIONE E LINKING SU FPGA per ottenere xclbin (in Tesi)
 v++ -c -k krnl_vadd --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw -o kernel/krnl_vadd.xo kernel/krnl_vadd.cpp
 v++ -l --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw -o krnl_vadd.xclbin kernel/krnl_vadd.xo
+
+
+
+
+Avvia sessione:
+   screen -S vitis
+
+Resume sessione:
+   screen -r vitis   
+
+Per ritornare in terminale da sessione:
+   ctrl-a
+   d

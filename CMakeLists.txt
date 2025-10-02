@@ -10,16 +10,18 @@ find_package(OpenCL REQUIRED)
 add_compile_definitions(FF_HEADER_ONLY NO_DEFAULT_MAPPING)
 
 # Cambiamo il nome dell'eseguibile in tesi-gpu-exec
-add_executable(tesi-gpu-exec
+add_executable(tesi-exec
     src/main.cpp
     src/ff_node_acc_t.cpp
-    src/GpuAccelerator.cpp)
+    src/CpuAccelerator.cpp
+    src/GpuAccelerator.cpp
+    src/FpgaAccelerator.cpp)
 
 # Aggiungiamo gli include per OpenCL
-target_include_directories(tesi-gpu-exec PRIVATE
+target_include_directories(tesi-exec PRIVATE
     ${CMAKE_SOURCE_DIR}/external/fastflow
     ${CMAKE_SOURCE_DIR}/include
     ${OpenCL_INCLUDE_DIRS})
 
-# Linkiamo la libreria OpenCL
-target_link_libraries(tesi-gpu-exec PRIVATE OpenCL::OpenCL)
+target_include_directories(tesi-exec PRIVATE ... )
+target_link_libraries(tesi-exec PRIVATE OpenCL::OpenCL)
