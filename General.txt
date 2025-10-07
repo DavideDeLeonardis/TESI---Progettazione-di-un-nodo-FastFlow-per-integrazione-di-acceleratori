@@ -120,3 +120,11 @@ The total memory you're asking the GPU to allocate is:
 3 * 1,000,000,000 * 4 byte = 12,000,000,000 byte = 12 Gigabyte (GB).
 Your Mac M2 Pro has a unified memory architecture (e.g., 16 GB or 32 GB total), but that memory is shared between the CPU, the GPU, the operating system, and all other running applications. 
 Attempting to allocate a single chunk of 12 GB for your application is exceeding the amount of memory available to the GPU at that moment, causing the allocation to fail.
+
+
+
+
+
+
+
+L'architettura a 3 stadi con questo nodo asincrono è instabile in FastFlow.

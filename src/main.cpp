@@ -10,10 +10,12 @@
 #include <vector>
 
 /* ------------ Emitter ------------- */
+// Questo nodo produce i Task da inviare alla pipeline.
 class Emitter : public ff::ff_node {
  public:
    explicit Emitter(size_t n, size_t num_tasks)
        : tasks_to_send(num_tasks), tasks_sent(0) {
+      // Alloca i vettori una sola volta per efficienza
       a.resize(n);
       b.resize(n);
       c.resize(n);
@@ -26,20 +28,20 @@ class Emitter : public ff::ff_node {
       c_ptr_ = c.data();
       n_ = n;
    }
+
    void *svc(void *) override {
-      std::cerr << "LOG E-1: Emitter::svc() called\n";
       if (tasks_sent < tasks_to_send) {
          tasks_sent++;
-         std::cerr << "LOG E-2: Emitter producing new task " << tasks_sent
-                   << "\n";
+         // Crea un nuovo oggetto Task sulla heap per ogni task
          return new Task{a_ptr_, b_ptr_, c_ptr_, n_};
       }
-      std::cerr << "LOG E-99: Emitter sending EOS\n";
+      // Dopo aver inviato tutti i task, invia il segnale di fine stream
       return FF_EOS;
    }
 
  private:
-   size_t tasks_to_send, tasks_sent;
+   size_t tasks_to_send;
+   size_t tasks_sent;
    int *a_ptr_, *b_ptr_, *c_ptr_;
    size_t n_;
    std::vector<int> a, b, c;
@@ -47,14 +49,17 @@ class Emitter : public ff::ff_node {
 
 /* --------------- main --------------- */
 int main(int argc, char *argv[]) {
+   // Parsing degli argomenti da riga di comando con valori di default
    size_t N = (argc > 1 ? std::stoull(argv[1]) : 1'000'000);
    size_t NUM_TASKS = (argc > 2 ? std::stoull(argv[2]) : 100);
    std::string device_type = (argc > 3 ? argv[3] : "cpu");
 
-   std::cout << "LOG M-1: Main started. Configuration: N=" << N
-             << ", NUM_TASKS=" << NUM_TASKS << ", Device=" << device_type
-             << "\n";
+   std::cout << "\nConfiguration: N=" << N << ", NUM_TASKS=" << NUM_TASKS
+             << ", Device=" << device_type << "\n";
+
    Emitter emitter(N, NUM_TASKS);
+
+   // Selezione dell'acceleratore (CPU, GPU, o FPGA) in base all'argomento
    std::unique_ptr<IAccelerator> accelerator;
    if (device_type == "fpga")
       accelerator = std::make_unique<FpgaAccelerator>();
@@ -63,36 +68,48 @@ int main(int argc, char *argv[]) {
    else
       accelerator = std::make_unique<CpuAccelerator>();
 
+   // Creazione della coppia promise/future per la verifica finale
    std::promise<size_t> count_promise;
    std::future<size_t> count_future = count_promise.get_future();
 
+   // Creazione del nodo accelerato, passando l'acceleratore e la promise
    ff_node_acc_t accNode(std::move(accelerator), std::move(count_promise));
 
+   // Creazione della pipeline a 2 stadi: Emitter -> accNode
    ff::ff_Pipe<> pipe(false, &emitter, &accNode);
 
-   std::cerr << "LOG M-2: Calling pipe.run_and_wait_end()...\n";
+   std::cout << "[Main] Starting pipeline execution...\n";
    auto t0 = std::chrono::steady_clock::now();
    if (pipe.run_and_wait_end() < 0) {
-      std::cerr << "run error\n";
+      std::cerr << "[ERROR] Main: Pipeline execution failed.\n";
       return -1;
    }
    auto t1 = std::chrono::steady_clock::now();
-   std::cerr << "LOG M-3: pipe.run_and_wait_end() returned.\n";
+   std::cout << "[Main] Pipeline execution finished.\n";
 
-   std::cerr << "LOG M-4: Calling count_future.get()...\n";
+   // Attesa sincrona del conteggio finale comunicato dal nodo accelerato
    size_t final_count = count_future.get();
-   std::cerr << "LOG M-5: count_future.get() returned with count "
-             << final_count << ".\n";
 
+   // Raccolta e stampa dei risultati di performance
    auto us_elapsed =
       std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
    auto us_computed = accNode.getComputeTime_us();
 
    std::cout << "-------------------------------------------\n"
+             << "Total time for " << NUM_TASKS << " tasks on " << device_type
+             << ":\n"
+             << "N=" << N << " elapsed=" << us_elapsed << " µs"
+             << ", computed=" << us_computed << " µs\n"
+             << "-------------------------------------------\n"
+             << "Average time per task:\n"
+             << "Avg elapsed=" << us_elapsed / (NUM_TASKS == 0 ? 1 : NUM_TASKS)
+             << " µs/task\n"
+             << "Avg computed="
+             << us_computed / (NUM_TASKS == 0 ? 1 : NUM_TASKS) << " µs/task\n"
+             << "-------------------------------------------\n"
              << "Verification:\n"
              << "Tasks processed: " << final_count << " / " << NUM_TASKS
              << (final_count == NUM_TASKS ? " (SUCCESS)" : " (FAILURE)") << "\n"
              << "-------------------------------------------\n";
-   std::cerr << "LOG M-6: Main is about to exit.\n";
    return 0;
 }

@@ -2,8 +2,7 @@
 
 #include "IAccelerator.hpp"
 
-// Implementazione dell'interfaccia per il calcolo su CPU.
-// Nota come non abbia bisogno di membri privati specifici.
+// Interfaccia per l'acceleratore basato su CPU.
 class CpuAccelerator : public IAccelerator {
  public:
    CpuAccelerator();

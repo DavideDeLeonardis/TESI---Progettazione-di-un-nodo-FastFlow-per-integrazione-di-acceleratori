@@ -1,8 +1,6 @@
-// File: src/GpuAccelerator.hpp
-
 #pragma once
 
-#include "IAccelerator.hpp" // Dobbiamo includere l'interfaccia che stiamo implementando
+#include "IAccelerator.hpp"
 
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
@@ -10,12 +8,10 @@
 #include <CL/cl.h>
 #endif
 
-// GpuAccelerator è una classe concreta che gestisce l'offloading su una GPU
-// tramite OpenCL. Eredita pubblicamente da IAccelerator.
+// Gestisce l'offloading del calcolo su una GPU tramite OpenCL.
 class GpuAccelerator : public IAccelerator {
  public:
    GpuAccelerator();
-   // Ora questo 'override' è valido perché ~IAccelerator() è virtual.
    ~GpuAccelerator() override;
 
    bool initialize() override;

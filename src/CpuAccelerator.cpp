@@ -3,21 +3,23 @@
 #include <chrono>
 #include <iostream>
 
-CpuAccelerator::CpuAccelerator() { std::cerr << "[CpuAccelerator] Created.\n"; }
+CpuAccelerator::CpuAccelerator() {
+   std::cerr << "[CpuAccelerator] Created.\n";
+}
 
 CpuAccelerator::~CpuAccelerator() {
    std::cerr << "[CpuAccelerator] Destroyed.\n";
 }
 
-// L'inizializzazione per la CPU è banale: non c'è nulla da fare.
 bool CpuAccelerator::initialize() {
-   std::cerr << "[CpuAccelerator] Initializing... (nothing to do)\n";
+   std::cerr << "[CpuAccelerator] Initializing...\n";
    return true;
 }
 
-// Il metodo execute contiene la logica di calcolo originale su CPU.
+// Esegue il calcolo della somma vettoriale direttamente sulla CPU.
 void CpuAccelerator::execute(void *generic_task, long long &computed_us) {
    auto *task = static_cast<Task *>(generic_task);
+   std::cerr << "[CpuAccelerator] Executing task with N=" << task->n << "...\n";
 
    auto t0 = std::chrono::steady_clock::now();
 
