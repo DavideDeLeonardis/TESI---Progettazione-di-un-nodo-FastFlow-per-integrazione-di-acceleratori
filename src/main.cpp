@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
    std::string device_type = (argc > 3 ? argv[3] : "cpu");
 
    std::cout << "\nConfiguration: N=" << N << ", NUM_TASKS=" << NUM_TASKS
-             << ", Device=" << device_type << "\n";
+             << ", Device=" << device_type << "\n\n";
 
    // Creazione dei componenti della pipeline
    Emitter emitter(N, NUM_TASKS);
