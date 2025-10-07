@@ -6,7 +6,6 @@ set(CMAKE_EXE_LINKER_FLAGS "-static-libstdc++")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 
-# Trova il pacchetto OpenCL (necessario per la versione GPU)
 find_package(OpenCL REQUIRED)
 
 add_compile_definitions(FF_HEADER_ONLY NO_DEFAULT_MAPPING)
