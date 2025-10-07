@@ -1,10 +1,10 @@
 #include "CpuAccelerator.hpp"
-#include <algorithm> // Necessario per std::transform
+#include <algorithm>
 #include <chrono>
 #include <iostream>
 
-CpuAccelerator::CpuAccelerator() {
-   std::cerr << "[CpuAccelerator] Created.\n";
+CpuAccelerator::CpuAccelerator() { 
+   std::cerr << "[CpuAccelerator] Created.\n"; 
 }
 
 CpuAccelerator::~CpuAccelerator() {
@@ -16,15 +16,30 @@ bool CpuAccelerator::initialize() {
    return true;
 }
 
-// Esegue il calcolo della somma vettoriale direttamente sulla CPU.
+/**
+ * @brief Esegue il calcolo della somma vettoriale direttamente sulla CPU.
+ *
+ * Utilizza la funzione std::transform della libreria standard C++
+ * @param generic_task Puntatore generico al task da eseguire.
+ * @param computed_us Riferimento per restituire il tempo di calcolo misurato.
+ */
 void CpuAccelerator::execute(void *generic_task, long long &computed_us) {
+   // Esegue il cast del puntatore generico al tipo di dato specifico (Task)
+   // che questo acceleratore sa come gestire.
    auto *task = static_cast<Task *>(generic_task);
    std::cerr << "[CpuAccelerator] Executing task with N=" << task->n << "...\n";
 
    auto t0 = std::chrono::steady_clock::now();
 
-   std::transform(task->a, task->a + task->n, task->b, task->c,
-                  [](int x, int y) { return x + y; });
+   // Esegue la somma vettoriale
+   // std::transform è altamente ottimizzato e può sfruttare le istruzioni
+   // vettoriali (SIMD) della CPU per accelerare il calcolo.
+   std::transform(
+      task->a,           // Inizio del primo vettore di input
+      task->a + task->n, // Fine del primo vettore di input
+      task->b,           // Inizio del secondo vettore di input
+      task->c,           // Inizio del vettore di output
+      [](int x, int y) { return x + y; }); // Operazione da applicare
 
    auto t1 = std::chrono::steady_clock::now();
 

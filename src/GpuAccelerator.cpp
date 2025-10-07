@@ -5,11 +5,18 @@
 #include <vector>
 
 GpuAccelerator::GpuAccelerator() {
-   std::cerr << "[GpuAccelerator] Created.\n";
+   std::cerr << "[INFO] GpuAccelerator: Created.\n";
 }
 
+/**
+ * @brief Distruttore della classe GpuAccelerator.
+ *
+ * Si occupa di rilasciare in modo sicuro tutte le risorse OpenCL allocate
+ * durante il ciclo di vita dell'oggetto. Le risorse vengono rilasciate in
+ * ordine inverso rispetto alla loro creazione.
+ */
 GpuAccelerator::~GpuAccelerator() {
-   std::cerr << "[GpuAccelerator] Cleaning up OpenCL resources...\n";
+   std::cerr << "[INFO] GpuAccelerator: Cleaning up OpenCL resources...\n";
    if (kernel_)
       clReleaseKernel(kernel_);
    if (program_)
@@ -18,35 +25,43 @@ GpuAccelerator::~GpuAccelerator() {
       clReleaseCommandQueue(queue_);
    if (context_)
       clReleaseContext(context_);
-   std::cerr << "[GpuAccelerator] Destroyed.\n";
+   std::cerr << "[INFO] GpuAccelerator: Destroyed.\n";
 }
 
+/**
+ * @brief Inizializza l'ambiente OpenCL per l'uso della GPU.
+ *
+ * Esegue tutte le operazioni di setup una tantum: trova il dispositivo,
+ * crea il contesto e la coda di comandi, legge il sorgente del kernel,
+ * lo compila e prepara l'oggetto kernel per l'esecuzione.
+ */
 bool GpuAccelerator::initialize() {
    std::cerr << "[GpuAccelerator] Initializing...\n";
    cl_platform_id platform_id = NULL;
    cl_device_id device_id = NULL;
    cl_int ret;
 
-   // Trova la piattaforma e il dispositivo GPU
+   // Trova una piattaforma OpenCL e un dispositivo di tipo GPU.
    clGetPlatformIDs(1, &platform_id, NULL);
    clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_GPU, 1, &device_id, NULL);
 
-   // Crea il contesto OpenCL
+   // Crea un contesto OpenCL.
    context_ = clCreateContext(NULL, 1, &device_id, NULL, NULL, &ret);
    if (!context_ || ret != CL_SUCCESS) {
       std::cerr << "[ERROR] GpuAccelerator: Failed to create OpenCL context.\n";
       return false;
    }
 
-   // --- CORREZIONE: Usa clCreateCommandQueue per compatibilità con OpenCL 1.2
-   // ---
+   // Crea una coda di comandi. È il canale attraverso cui l'host
+   // invia le operazioni (es. trasferimenti di memoria, esecuzioni kernel)
+   // al device.
    queue_ = clCreateCommandQueue(context_, device_id, 0, &ret);
    if (!queue_ || ret != CL_SUCCESS) {
       std::cerr << "[ERROR] GpuAccelerator: Failed to create command queue.\n";
       return false;
    }
 
-   // Carica il sorgente del kernel dal file
+   // Legge il codice sorgente del kernel OpenCL da un file esterno.
    std::ifstream kernelFile("kernel/vecAdd.cl");
    if (!kernelFile.is_open()) {
       std::cerr
@@ -58,7 +73,7 @@ bool GpuAccelerator::initialize() {
    const char *source_str = kernelSource.c_str();
    size_t source_size = kernelSource.length();
 
-   // Crea il programma dal sorgente
+   // Crea un oggetto programma OpenCL a partire dal codice sorgente.
    program_ =
       clCreateProgramWithSource(context_, 1, &source_str, &source_size, &ret);
    if (!program_ || ret != CL_SUCCESS) {
@@ -66,7 +81,7 @@ bool GpuAccelerator::initialize() {
       return false;
    }
 
-   // Compila il programma
+   // Compila il programma per il dispositivo target.
    ret = clBuildProgram(program_, 1, &device_id, NULL, NULL, NULL);
    if (ret != CL_SUCCESS) {
       std::cerr << "[ERROR] GpuAccelerator: Kernel compilation failed.\n";
@@ -80,7 +95,7 @@ bool GpuAccelerator::initialize() {
       return false;
    }
 
-   // Estrai il kernel dal programma compilato
+   // Estrai un handle al kernel compilato ("vecAdd").
    kernel_ = clCreateKernel(program_, "vecAdd", &ret);
    if (!kernel_ || ret != CL_SUCCESS) {
       std::cerr << "[ERROR] GpuAccelerator: Failed to create kernel object.\n";
@@ -91,6 +106,15 @@ bool GpuAccelerator::initialize() {
    return true;
 }
 
+/**
+ * @brief Esegue un singolo task di somma vettoriale sulla GPU.
+ *
+ * Orchestra l'intero processo di offloading: allocazione della memoria sul
+ * device, trasferimento dei dati, impostazione degli argomenti, esecuzione
+ * del kernel e recupero dei risultati.
+ * @param generic_task Puntatore generico al task da eseguire.
+ * @param computed_us Riferimento per restituire il tempo di calcolo.
+ */
 void GpuAccelerator::execute(void *generic_task, long long &computed_us) {
    auto *task = static_cast<Task *>(generic_task);
    std::cerr << "[GpuAccelerator] Offloading task with N=" << task->n
@@ -99,7 +123,9 @@ void GpuAccelerator::execute(void *generic_task, long long &computed_us) {
    cl_int ret;
    size_t buffer_size = sizeof(int) * task->n;
 
-   // 1. Creare i buffer di memoria sul device
+   // Allocazione dei buffer di memoria sulla GPU (device memory).
+   // CL_MEM_READ_ONLY: l'host può solo scriverci, il kernel solo leggerci.
+   // CL_MEM_WRITE_ONLY: il kernel può solo scriverci, l'host solo leggerci.
    cl_mem bufferA =
       clCreateBuffer(context_, CL_MEM_READ_ONLY, buffer_size, NULL, &ret);
    cl_mem bufferB =
@@ -109,35 +135,41 @@ void GpuAccelerator::execute(void *generic_task, long long &computed_us) {
 
    auto t0 = std::chrono::steady_clock::now();
 
-   // 2. Copiare i dati dall'host al device
+   // Trasferimento dei dati dalla memoria host (RAM) alla memoria device
+   // (VRAM). CL_TRUE: la chiamata è bloccante: attende il completamento del
+   // trasferimento.
    clEnqueueWriteBuffer(queue_, bufferA, CL_TRUE, 0, buffer_size, task->a, 0,
                         NULL, NULL);
    clEnqueueWriteBuffer(queue_, bufferB, CL_TRUE, 0, buffer_size, task->b, 0,
                         NULL, NULL);
 
-   // 3. Impostare gli argomenti del kernel
+   // Impostazione degli argomenti del kernel. Si collegano i buffer di
+   // memoria del device ai parametri della funzione kernel.
    clSetKernelArg(kernel_, 0, sizeof(cl_mem), &bufferA);
    clSetKernelArg(kernel_, 1, sizeof(cl_mem), &bufferB);
    clSetKernelArg(kernel_, 2, sizeof(cl_mem), &bufferC);
    clSetKernelArg(kernel_, 3, sizeof(unsigned int), &(task->n));
 
-   // 4. Eseguire il kernel
+   // Esecuzione del kernel.
+   // Si specifica il numero totale di thread (work-item) da lanciare,
+   // che in questo caso è pari alla dimensione del vettore.
    size_t global_work_size = task->n;
    clEnqueueNDRangeKernel(queue_, kernel_, 1, NULL, &global_work_size, NULL, 0,
                           NULL, NULL);
 
-   // 5. Copiare i risultati dal device all'host
+   // Trasferimento dei risultati dalla memoria device alla memoria host.
    clEnqueueReadBuffer(queue_, bufferC, CL_TRUE, 0, buffer_size, task->c, 0,
                        NULL, NULL);
 
-   // 6. Attendere il completamento di tutti i comandi in coda
+   // Sincronizzazione. Forza l'attesa del completamento di tutti i comandi
+   // inviati alla coda.
    clFinish(queue_);
 
    auto t1 = std::chrono::steady_clock::now();
    computed_us =
       std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
 
-   // 7. Rilasciare le risorse
+   // Rilascio dei buffer di memoria sul device, libera le risorse.
    clReleaseMemObject(bufferA);
    clReleaseMemObject(bufferB);
    clReleaseMemObject(bufferC);

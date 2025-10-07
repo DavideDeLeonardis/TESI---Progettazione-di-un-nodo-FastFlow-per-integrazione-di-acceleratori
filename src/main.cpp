@@ -10,32 +10,51 @@
 #include <vector>
 
 /* ------------ Emitter ------------- */
-// Questo nodo produce i Task da inviare alla pipeline.
+/**
+ * @class Emitter
+ * @brief Nodo sorgente della pipeline FastFlow.
+ *
+ * Emitter genera i Task da processare.
+ * Inizializza i dati di input una sola volta e poi crea dinamicamente un nuovo
+ * oggetto Task per ogni richiesta dalla pipeline.
+ */
 class Emitter : public ff::ff_node {
  public:
+   /**
+    * @param n La dimensione dei vettori da processare.
+    * @param num_tasks Il numero totale di task da generare.
+    */
    explicit Emitter(size_t n, size_t num_tasks)
        : tasks_to_send(num_tasks), tasks_sent(0) {
-      // Alloca i vettori una sola volta per efficienza
+      // I vettori di dati vengono allocati e inizializzati una sola volta
       a.resize(n);
       b.resize(n);
-      c.resize(n);
+      c.resize(n); // Il vettore 'c' viene passato come buffer di output.
       for (size_t i = 0; i < n; ++i) {
          a[i] = int(i);
          b[i] = int(2 * i);
       }
+      // Salviamo i puntatori ai dati e la dimensione per creare i Task.
       a_ptr_ = a.data();
       b_ptr_ = b.data();
       c_ptr_ = c.data();
       n_ = n;
    }
 
+   /**
+    * @return Un puntatore a un nuovo Task, o FF_EOS al termine.
+    */
    void *svc(void *) override {
       if (tasks_sent < tasks_to_send) {
          tasks_sent++;
-         // Crea un nuovo oggetto Task sulla heap per ogni task
+         // FONDAMENTALE: viene creato un NUOVO oggetto Task sulla heap per ogni
+         // invio. Essenziale in un ambiente multi-thread per garantire
+         // che ogni task abbia un ciclo di vita indipendente e per evitare
+         // race condition. Il nodo successivo sarà responsabile di deallocare
+         // questa memoria con 'delete'.
          return new Task{a_ptr_, b_ptr_, c_ptr_, n_};
       }
-      // Dopo aver inviato tutti i task, invia il segnale di fine stream
+      // Una volta inviati tutti i task, invia il segnale di fine stream (EOS).
       return FF_EOS;
    }
 
@@ -44,12 +63,16 @@ class Emitter : public ff::ff_node {
    size_t tasks_sent;
    int *a_ptr_, *b_ptr_, *c_ptr_;
    size_t n_;
-   std::vector<int> a, b, c;
+   std::vector<int> a, b, c; // I vettori che possiedono i dati.
 };
 
 /* --------------- main --------------- */
 int main(int argc, char *argv[]) {
-   // Parsing degli argomenti da riga di comando con valori di default
+   // Parsing degli argomenti da riga di comando con valori di default.
+   // Arg 1: Dimensione del vettore (N)
+   // Arg 2: Numero di task da eseguire (NUM_TASKS)
+   // Arg 3: Tipo di device ('cpu', 'gpu', 'fpga')
+   // Default: N=1'000'000, NUM_TASKS=100, device='cpu'
    size_t N = (argc > 1 ? std::stoull(argv[1]) : 1'000'000);
    size_t NUM_TASKS = (argc > 2 ? std::stoull(argv[2]) : 100);
    std::string device_type = (argc > 3 ? argv[3] : "cpu");
@@ -57,25 +80,29 @@ int main(int argc, char *argv[]) {
    std::cout << "\nConfiguration: N=" << N << ", NUM_TASKS=" << NUM_TASKS
              << ", Device=" << device_type << "\n";
 
+   // Creazione dei componenti della pipeline
    Emitter emitter(N, NUM_TASKS);
 
-   // Selezione dell'acceleratore (CPU, GPU, o FPGA) in base all'argomento
+   // Selezione e creazione dell'acceleratore (Pattern Strategy/Factory)
    std::unique_ptr<IAccelerator> accelerator;
-   if (device_type == "fpga")
+   if (device_type == "fpga") {
       accelerator = std::make_unique<FpgaAccelerator>();
-   else if (device_type == "gpu")
+   } else if (device_type == "gpu") {
       accelerator = std::make_unique<GpuAccelerator>();
-   else
+   } else {
       accelerator = std::make_unique<CpuAccelerator>();
+   }
 
-   // Creazione della coppia promise/future per la verifica finale
+   // Verifica che tutti i task siano stati processati
    std::promise<size_t> count_promise;
    std::future<size_t> count_future = count_promise.get_future();
 
-   // Creazione del nodo accelerato, passando l'acceleratore e la promise
+   // 4. Creazione del nodo accelerato con l'acceleratore scelto
    ff_node_acc_t accNode(std::move(accelerator), std::move(count_promise));
 
-   // Creazione della pipeline a 2 stadi: Emitter -> accNode
+   // 5. Composizione e avvio della pipeline
+   // La pipeline è composta da 2 stadi: l'Emitter che produce i Task e
+   // l'accNode che li consuma, li processa e li conta.
    ff::ff_Pipe<> pipe(false, &emitter, &accNode);
 
    std::cout << "[Main] Starting pipeline execution...\n";
@@ -87,10 +114,8 @@ int main(int argc, char *argv[]) {
    auto t1 = std::chrono::steady_clock::now();
    std::cout << "[Main] Pipeline execution finished.\n";
 
-   // Attesa sincrona del conteggio finale comunicato dal nodo accelerato
    size_t final_count = count_future.get();
 
-   // Raccolta e stampa dei risultati di performance
    auto us_elapsed =
       std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
    auto us_computed = accNode.getComputeTime_us();
@@ -111,5 +136,8 @@ int main(int argc, char *argv[]) {
              << "Tasks processed: " << final_count << " / " << NUM_TASKS
              << (final_count == NUM_TASKS ? " (SUCCESS)" : " (FAILURE)") << "\n"
              << "-------------------------------------------\n";
+
+   // La distruzione degli oggetti (pipe, accNode, accelerator, emitter)
+   // viene gestita automaticamente dallo stack.
    return 0;
 }
