@@ -97,10 +97,10 @@ int main(int argc, char *argv[]) {
    std::promise<size_t> count_promise;
    std::future<size_t> count_future = count_promise.get_future();
 
-   // 4. Creazione del nodo accelerato con l'acceleratore scelto
+   // Creazione del nodo accelerato con l'acceleratore scelto
    ff_node_acc_t accNode(std::move(accelerator), std::move(count_promise));
 
-   // 5. Composizione e avvio della pipeline
+   // Composizione e avvio della pipeline
    // La pipeline è composta da 2 stadi: l'Emitter che produce i Task e
    // l'accNode che li consuma, li processa e li conta.
    ff::ff_Pipe<> pipe(false, &emitter, &accNode);
