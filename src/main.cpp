@@ -116,21 +116,22 @@ int main(int argc, char *argv[]) {
 
    size_t final_count = count_future.get();
 
-   auto us_elapsed =
-      std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
+   // Raccolta dei risultati in nanosecondi
+   auto ns_elapsed =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
    auto us_computed = accNode.getComputeTime_us();
 
    std::cout << "-------------------------------------------\n"
              << "Total time for " << NUM_TASKS << " tasks on " << device_type
              << ":\n"
-             << "N=" << N << " elapsed=" << us_elapsed << " µs"
-             << ", computed=" << us_computed << " µs\n"
+             << "N=" << N << " elapsed=" << ns_elapsed << " ns"
+             << ", computed=" << us_computed << " ns\n"
              << "-------------------------------------------\n"
              << "Average time per task:\n"
-             << "Avg elapsed=" << us_elapsed / (NUM_TASKS == 0 ? 1 : NUM_TASKS)
-             << " µs/task\n"
+             << "Avg elapsed=" << ns_elapsed / (NUM_TASKS == 0 ? 1 : NUM_TASKS)
+             << " ns/task\n"
              << "Avg computed="
-             << us_computed / (NUM_TASKS == 0 ? 1 : NUM_TASKS) << " µs/task\n"
+             << us_computed / (NUM_TASKS == 0 ? 1 : NUM_TASKS) << " ns/task\n"
              << "-------------------------------------------\n"
              << "Verification:\n"
              << "Tasks processed: " << final_count << " / " << NUM_TASKS
