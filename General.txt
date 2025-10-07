@@ -19,6 +19,13 @@ L'account è deleonardis, la macchina è
 
 
 
+DEVO ANCORA RIUTILIZZARE I BUFFER di memoria sulla GPU/FPGA (su CPU sono riutilizzati):
+   Spostare l'Allocazione: Spostare le chiamate clCreateBuffer dal metodo execute() al metodo initialize() degli adapter. I cl_mem (bufferA, bufferB, bufferC) diventerebbero membri privati delle classi GpuAccelerator e FpgaAccelerator.
+   Semplificare execute: Il metodo execute() non dovrebbe più allocare e deallocare, ma solo orchestrare i trasferimenti di dati (Write, Read) e l'esecuzione del kernel, usando i buffer pre-allocati.
+   Spostare la Deallocazione: Le chiamate clReleaseMemObject andrebbero spostate nel distruttore degli adapter.
+
+
+
 Punti chiave da ricordare:
    Asincronia: la computazione sull’acceleratore non blocca i thread FastFlow grazie alla coppia Producer/Consumer.
    Overlapping: mentre il kernel n è in esecuzione, il producer può preparare i dati per n + 1 e il consumer può leggere i risultati di n – 1.
