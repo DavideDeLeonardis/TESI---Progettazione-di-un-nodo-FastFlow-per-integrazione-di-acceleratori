@@ -133,7 +133,6 @@ int main(int argc, char *argv[]) {
              << "Avg computed="
              << us_computed / (NUM_TASKS == 0 ? 1 : NUM_TASKS) << " ns/task\n"
              << "-------------------------------------------\n"
-             << "Verification:\n"
              << "Tasks processed: " << final_count << " / " << NUM_TASKS
              << (final_count == NUM_TASKS ? " (SUCCESS)" : " (FAILURE)") << "\n"
              << "-------------------------------------------\n";
