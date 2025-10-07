@@ -54,12 +54,11 @@ bool FpgaAccelerator::initialize() {
       return false;
    }
 
-   std::cerr << "[DEBUG] FpgaAccelerator: Loading FPGA binary file "
-                "(krnl_vadd.xclbin)...\n";
+   std::cerr << "[DEBUG] FpgaAccelerator: Loading xclbin.\n";
    std::ifstream binaryFile("krnl_vadd.xclbin", std::ios::binary);
    if (!binaryFile.is_open()) {
       std::cerr << "[ERROR] FpgaAccelerator: Could not open kernel file "
-                   "krnl_vadd.xclbin.\n";
+                   "krnl.xclbin.\n";
       return false;
    }
    binaryFile.seekg(0, binaryFile.end);
@@ -71,7 +70,7 @@ bool FpgaAccelerator::initialize() {
    const unsigned char *binaries[] = {kernelBinary.data()};
    const size_t binary_sizes[] = {binarySize};
 
-   std::cerr << "[DEBUG] FpgaAccelerator: Creating program from binary...\n";
+   std::cerr << "[DEBUG] FpgaAccelerator: Creating program from xclbin...\n";
    program_ = clCreateProgramWithBinary(context_, 1, &device_id, binary_sizes,
                                         binaries, NULL, &ret);
    if (!program_ || ret != CL_SUCCESS) {
@@ -81,7 +80,7 @@ bool FpgaAccelerator::initialize() {
    }
 
    std::cerr
-      << "[DEBUG] FpgaAccelerator: Creating kernel object 'krnl_vadd'...\n";
+      << "[DEBUG] FpgaAccelerator: Creating kernel object.\n";
    kernel_ = clCreateKernel(program_, "krnl_vadd", &ret);
    if (!kernel_ || ret != CL_SUCCESS) {
       std::cerr << "[ERROR] FpgaAccelerator: Failed to create kernel.\n";
