@@ -21,9 +21,9 @@ bool CpuAccelerator::initialize() {
  *
  * Utilizza la funzione std::transform della libreria standard C++
  * @param generic_task Puntatore generico al task da eseguire.
- * @param computed_us Riferimento per restituire il tempo di calcolo misurato.
+ * @param computed_ns Riferimento per restituire il tempo di calcolo misurato.
  */
-void CpuAccelerator::execute(void *generic_task, long long &computed_us) {
+void CpuAccelerator::execute(void *generic_task, long long &computed_ns) {
    // Esegue il cast del puntatore generico al tipo di dato specifico (Task)
    // che questo acceleratore sa come gestire.
    auto *task = static_cast<Task *>(generic_task);
@@ -43,8 +43,8 @@ void CpuAccelerator::execute(void *generic_task, long long &computed_us) {
 
    auto t1 = std::chrono::steady_clock::now();
 
-   computed_us =
-      std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
+   computed_ns =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
 
    std::cerr << "[CpuAccelerator - END] Task execution finished.\n";
 }

@@ -9,5 +9,5 @@ class CpuAccelerator : public IAccelerator {
    ~CpuAccelerator() override;
 
    bool initialize() override;
-   void execute(void *generic_task, long long &computed_us) override;
+   void execute(void *generic_task, long long &computed_ns) override;
 };

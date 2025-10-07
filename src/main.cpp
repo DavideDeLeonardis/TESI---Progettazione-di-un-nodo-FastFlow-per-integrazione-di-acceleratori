@@ -119,7 +119,7 @@ int main(int argc, char *argv[]) {
    // Raccolta dei risultati in nanosecondi
    auto ns_elapsed =
       std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
-   auto us_computed = accNode.getComputeTime_us();
+   auto us_computed = accNode.getComputeTime_ns();
 
    std::cout << "-------------------------------------------\n"
              << "Total time for " << NUM_TASKS << " tasks on " << device_type

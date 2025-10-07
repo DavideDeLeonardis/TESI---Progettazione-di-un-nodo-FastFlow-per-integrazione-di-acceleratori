@@ -12,7 +12,7 @@ class IAccelerator {
    virtual bool initialize() = 0;
 
    // Esegue un singolo task di calcolo sull'acceleratore.
-   virtual void execute(void *generic_task, long long &computed_us) = 0;
+   virtual void execute(void *generic_task, long long &computed_ns) = 0;
 
    // Non abbiamo bisogno di un metodo 'cleanup()' esplicito perché
    // sfrutteremo il distruttore delle classi concrete (GpuAccelerator, etc.)

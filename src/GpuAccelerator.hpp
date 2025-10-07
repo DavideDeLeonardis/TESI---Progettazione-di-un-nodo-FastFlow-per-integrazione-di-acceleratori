@@ -15,7 +15,7 @@ class GpuAccelerator : public IAccelerator {
    ~GpuAccelerator() override;
 
    bool initialize() override;
-   void execute(void *generic_task, long long &computed_us) override;
+   void execute(void *generic_task, long long &computed_ns) override;
 
  private:
    cl_context context_{nullptr};

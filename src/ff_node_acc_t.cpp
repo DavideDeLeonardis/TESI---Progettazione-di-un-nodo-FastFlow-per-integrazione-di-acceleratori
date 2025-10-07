@@ -12,7 +12,7 @@ void *const ff_node_acc_t::SENTINEL = &sentinel_obj;
  */
 ff_node_acc_t::ff_node_acc_t(std::unique_ptr<IAccelerator> acc,
                              std::promise<size_t> &&count_promise)
-    : accelerator_(std::move(acc)), computed_us_(0), tasks_processed_(0),
+    : accelerator_(std::move(acc)), computed_ns_(0), tasks_processed_(0),
       count_promise_(std::move(count_promise)) {}
 
 /**
@@ -25,8 +25,8 @@ ff_node_acc_t::~ff_node_acc_t() {
    delete outQ_;
 }
 
-long long ff_node_acc_t::getComputeTime_us() const {
-   return computed_us_.load();
+long long ff_node_acc_t::getComputeTime_ns() const {
+   return computed_ns_.load();
 }
 
 /**
@@ -108,10 +108,10 @@ void ff_node_acc_t::producerLoop() {
       }
 
       auto *task = static_cast<Task *>(ptr);
-      long long current_task_us = 0;
+      long long current_task_ns = 0;
 
-      accelerator_->execute(task, current_task_us);
-      computed_us_ += current_task_us;
+      accelerator_->execute(task, current_task_ns);
+      computed_ns_ += current_task_ns;
 
       auto *res = new Result{task->c, task->n};
       delete task; // Il producer è responsabile di deallocare il Task.

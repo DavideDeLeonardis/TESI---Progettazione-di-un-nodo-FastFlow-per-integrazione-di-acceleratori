@@ -127,9 +127,9 @@ bool GpuAccelerator::initialize() {
  * device, trasferimento dei dati, impostazione degli argomenti, esecuzione
  * del kernel e recupero dei risultati.
  * @param generic_task Puntatore generico al task da eseguire.
- * @param computed_us Riferimento per restituire il tempo di calcolo.
+ * @param computed_ns Riferimento per restituire il tempo di calcolo.
  */
-void GpuAccelerator::execute(void *generic_task, long long &computed_us) {
+void GpuAccelerator::execute(void *generic_task, long long &computed_ns) {
    auto *task = static_cast<Task *>(generic_task);
    std::cerr << "[GpuAccelerator - START] Offloading task with N=" << task->n
              << "...\n";
@@ -193,8 +193,8 @@ void GpuAccelerator::execute(void *generic_task, long long &computed_us) {
    OCL_CHECK_EXEC(ret, clFinish(queue_));
 
    auto t1 = std::chrono::steady_clock::now();
-   computed_us =
-      std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
+   computed_ns =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
 
    // Rilascio dei buffer di memoria sul device, libera le risorse.
    clReleaseMemObject(bufferA);

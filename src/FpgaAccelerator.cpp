@@ -112,9 +112,9 @@ bool FpgaAccelerator::initialize() {
  * @brief Esegue un singolo task di somma vettoriale sull'FPGA.
  *
  * @param generic_task Puntatore generico al task da eseguire.
- * @param computed_us Riferimento per restituire il tempo di calcolo.
+ * @param computed_ns Riferimento per restituire il tempo di calcolo.
  */
-void FpgaAccelerator::execute(void *generic_task, long long &computed_us) {
+void FpgaAccelerator::execute(void *generic_task, long long &computed_ns) {
    auto *task = static_cast<Task *>(generic_task);
    std::cerr << "[FpgaAccelerator - START] Offloading task with N=" << task->n
              << "...\n";
@@ -180,8 +180,8 @@ void FpgaAccelerator::execute(void *generic_task, long long &computed_us) {
    OCL_CHECK(ret, clFinish(queue_), return);
 
    auto t1 = std::chrono::steady_clock::now();
-   computed_us =
-      std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
+   computed_ns =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
 
    clReleaseMemObject(bufferA);
    clReleaseMemObject(bufferB);

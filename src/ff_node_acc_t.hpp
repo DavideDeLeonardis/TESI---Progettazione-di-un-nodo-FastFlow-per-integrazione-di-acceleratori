@@ -31,7 +31,7 @@ class ff_node_acc_t : public ff_node {
                           std::promise<size_t> &&count_promise);
    ~ff_node_acc_t() override;
 
-   long long getComputeTime_us() const;
+   long long getComputeTime_ns() const;
 
    int svc_init() override;
    void *svc(void *t) override;
@@ -56,7 +56,7 @@ class ff_node_acc_t : public ff_node {
    ResultQ *outQ_{nullptr};
 
    // Contatore atomico per il tempo di calcolo totale.
-   std::atomic<long long> computed_us_{0};
+   std::atomic<long long> computed_ns_{0};
    // Membri dedicati alla verifica finale del conteggio dei task.
    std::atomic<size_t> tasks_processed_{0};
    std::promise<size_t> count_promise_;
