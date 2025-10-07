@@ -27,11 +27,9 @@ Punti chiave da ricordare:
 
 
 // BUILD AND EXEC:
-rm -rf build
-mkdir build && cd build
-cmake ..
-cmake --build .
-./tesi-gpu-exec
+rm -rf build; cmake -B build && cmake --build build && ./build/tesi-exec 1000000 2 gpu
+
+
 
 
 CON 1 TASK:
@@ -127,4 +125,4 @@ Attempting to allocate a single chunk of 12 GB for your application is exceeding
 
 
 
-L'architettura a 3 stadi con questo nodo asincrono è instabile in FastFlow.
+L'architettura a 3 stadi con questo nodo asincrono è instabile in FastFlow => uso 2 stadi (Emitter, accNode)
