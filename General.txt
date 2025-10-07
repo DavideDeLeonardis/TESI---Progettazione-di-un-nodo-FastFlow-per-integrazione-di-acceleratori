@@ -108,3 +108,15 @@ Resume sessione:
 Per ritornare in terminale da sessione:
    ctrl-a
    d
+
+
+
+// L'Analisi del Problema - N troppo grande
+The problem is the massive size of N you're trying to process in a single go. Let's do the math:
+N (Dimensione del Vettore): 1,000,000,000 (1 miliardo di elementi)
+Tipo di Dato: int (4 byte per elemento)
+Numero di Vettori: 3 (input a, input b, output c)
+The total memory you're asking the GPU to allocate is:
+3 * 1,000,000,000 * 4 byte = 12,000,000,000 byte = 12 Gigabyte (GB).
+Your Mac M2 Pro has a unified memory architecture (e.g., 16 GB or 32 GB total), but that memory is shared between the CPU, the GPU, the operating system, and all other running applications. 
+Attempting to allocate a single chunk of 12 GB for your application is exceeding the amount of memory available to the GPU at that moment, causing the allocation to fail.
