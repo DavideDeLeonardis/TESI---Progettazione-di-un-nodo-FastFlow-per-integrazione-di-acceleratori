@@ -4,6 +4,20 @@
 #include <iostream>
 #include <vector>
 
+// Macro per un controllo robusto degli errori OpenCL.
+// Esegue una chiamata API, controlla il codice di ritorno e, in caso di errore,
+// stampa un messaggio dettagliato ed esegue l'azione specificata.
+#define OCL_CHECK(err_code, call, on_error_action)                             \
+   do {                                                                        \
+      err_code = (call);                                                       \
+      if (err_code != CL_SUCCESS) {                                            \
+         std::cerr << "[ERROR] OpenCL call `" #call "` failed with code "      \
+                   << err_code << " at " << __FILE__ << ":" << __LINE__        \
+                   << std::endl;                                               \
+         on_error_action;                                                      \
+      }                                                                        \
+   } while (0)
+
 FpgaAccelerator::FpgaAccelerator() {
    std::cerr << "[FpgaAccelerator] Created.\n";
 }
@@ -35,27 +49,21 @@ bool FpgaAccelerator::initialize() {
    cl_device_id device_id = NULL;
 
    // Trova una piattaforma OpenCL e un dispositivo di tipo ACCELERATOR
-   ret = clGetPlatformIDs(1, &platform_id, NULL);
-   if (ret != CL_SUCCESS) {
-      std::cerr << "[ERROR] FpgaAccelerator: Failed to get Platform IDs.\n";
-      return false;
-   }
-   ret = clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_ACCELERATOR, 1, &device_id,
-                        NULL);
-   if (ret != CL_SUCCESS) {
-      std::cerr << "[ERROR] FpgaAccelerator: Failed to get FPGA Device ID.\n";
-      return false;
-   }
+   OCL_CHECK(ret, clGetPlatformIDs(1, &platform_id, NULL), return false);
+   OCL_CHECK(ret,
+             clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_ACCELERATOR, 1,
+                            &device_id, NULL),
+             return false);
 
    // Creazione del contesto e della coda di comandi.
    context_ = clCreateContext(NULL, 1, &device_id, NULL, NULL, &ret);
-   if (!context_) {
+   if (!context_ || ret != CL_SUCCESS) {
       std::cerr
          << "[ERROR] FpgaAccelerator: Failed to create OpenCL context.\n";
       return false;
    }
    queue_ = clCreateCommandQueue(context_, device_id, 0, &ret);
-   if (!queue_) {
+   if (!queue_ || ret != CL_SUCCESS) {
       std::cerr << "[ERROR] FpgaAccelerator: Failed to create command queue.\n";
       return false;
    }
@@ -108,7 +116,7 @@ bool FpgaAccelerator::initialize() {
  */
 void FpgaAccelerator::execute(void *generic_task, long long &computed_us) {
    auto *task = static_cast<Task *>(generic_task);
-   std::cerr << "[FpgaAccelerator] Offloading task with N=" << task->n
+   std::cerr << "[FpgaAccelerator - START] Offloading task with N=" << task->n
              << "...\n";
    cl_int ret;
 
@@ -116,24 +124,40 @@ void FpgaAccelerator::execute(void *generic_task, long long &computed_us) {
    size_t buffer_size = sizeof(int) * task->n;
    cl_mem bufferA =
       clCreateBuffer(context_, CL_MEM_READ_ONLY, buffer_size, NULL, &ret);
+   if (!bufferA || ret != CL_SUCCESS) {
+      std::cerr << "[ERROR] FpgaAccelerator: Failed to create bufferA.\n";
+      return;
+   }
    cl_mem bufferB =
       clCreateBuffer(context_, CL_MEM_READ_ONLY, buffer_size, NULL, &ret);
+   if (!bufferB || ret != CL_SUCCESS) {
+      std::cerr << "[ERROR] FpgaAccelerator: Failed to create bufferB.\n";
+      return;
+   }
    cl_mem bufferC =
       clCreateBuffer(context_, CL_MEM_WRITE_ONLY, buffer_size, NULL, &ret);
+   if (!bufferC || ret != CL_SUCCESS) {
+      std::cerr << "[ERROR] FpgaAccelerator: Failed to create bufferC.\n";
+      return;
+   }
 
    auto t0 = std::chrono::steady_clock::now();
 
-   clEnqueueWriteBuffer(queue_, bufferA, CL_TRUE, 0, buffer_size, task->a, 0,
-                        NULL, NULL);
-   clEnqueueWriteBuffer(queue_, bufferB, CL_TRUE, 0, buffer_size, task->b, 0,
-                        NULL, NULL);
+   OCL_CHECK(ret,
+             clEnqueueWriteBuffer(queue_, bufferA, CL_TRUE, 0, buffer_size,
+                                  task->a, 0, NULL, NULL),
+             return);
+   OCL_CHECK(ret,
+             clEnqueueWriteBuffer(queue_, bufferB, CL_TRUE, 0, buffer_size,
+                                  task->b, 0, NULL, NULL),
+             return);
 
    // Impostazione degli argomenti del kernel.
    int n_as_int = static_cast<int>(task->n);
-   clSetKernelArg(kernel_, 0, sizeof(cl_mem), &bufferA);
-   clSetKernelArg(kernel_, 1, sizeof(cl_mem), &bufferB);
-   clSetKernelArg(kernel_, 2, sizeof(cl_mem), &bufferC);
-   clSetKernelArg(kernel_, 3, sizeof(int), &n_as_int);
+   OCL_CHECK(ret, clSetKernelArg(kernel_, 0, sizeof(cl_mem), &bufferA), return);
+   OCL_CHECK(ret, clSetKernelArg(kernel_, 1, sizeof(cl_mem), &bufferB), return);
+   OCL_CHECK(ret, clSetKernelArg(kernel_, 2, sizeof(cl_mem), &bufferC), return);
+   OCL_CHECK(ret, clSetKernelArg(kernel_, 3, sizeof(int), &n_as_int), return);
 
    // Esecuzione del kernel.
    // Il kernel FPGA è di tipo "single-task": viene lanciato una sola volta
@@ -142,14 +166,18 @@ void FpgaAccelerator::execute(void *generic_task, long long &computed_us) {
    // per 'n' elementi.
    size_t global_work_size = 1;
    size_t local_work_size = 1;
-   clEnqueueNDRangeKernel(queue_, kernel_, 1, NULL, &global_work_size,
-                          &local_work_size, 0, NULL, NULL);
+   OCL_CHECK(ret,
+             clEnqueueNDRangeKernel(queue_, kernel_, 1, NULL, &global_work_size,
+                                    &local_work_size, 0, NULL, NULL),
+             return);
 
    // Recupero risultati, sincronizzazione, calcolo tempo di esecuzione e
    // rilascio risorse
-   clEnqueueReadBuffer(queue_, bufferC, CL_TRUE, 0, buffer_size, task->c, 0,
-                       NULL, NULL);
-   clFinish(queue_);
+   OCL_CHECK(ret,
+             clEnqueueReadBuffer(queue_, bufferC, CL_TRUE, 0, buffer_size,
+                                 task->c, 0, NULL, NULL),
+             return);
+   OCL_CHECK(ret, clFinish(queue_), return);
 
    auto t1 = std::chrono::steady_clock::now();
    computed_us =
@@ -158,4 +186,6 @@ void FpgaAccelerator::execute(void *generic_task, long long &computed_us) {
    clReleaseMemObject(bufferA);
    clReleaseMemObject(bufferB);
    clReleaseMemObject(bufferC);
+
+   std::cerr << "[FpgaAccelerator - END] Task execution finished.\n";
 }

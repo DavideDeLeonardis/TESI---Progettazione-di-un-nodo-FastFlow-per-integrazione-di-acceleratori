@@ -27,7 +27,7 @@ void CpuAccelerator::execute(void *generic_task, long long &computed_us) {
    // Esegue il cast del puntatore generico al tipo di dato specifico (Task)
    // che questo acceleratore sa come gestire.
    auto *task = static_cast<Task *>(generic_task);
-   std::cerr << "[CpuAccelerator] Executing task with N=" << task->n << "...\n";
+   std::cerr << "[CpuAccelerator - START] Executing task with N=" << task->n << "...\n";
 
    auto t0 = std::chrono::steady_clock::now();
 
@@ -45,4 +45,6 @@ void CpuAccelerator::execute(void *generic_task, long long &computed_us) {
 
    computed_us =
       std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
+
+   std::cerr << "[CpuAccelerator - END] Task execution finished.\n";
 }
