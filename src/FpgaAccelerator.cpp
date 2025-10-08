@@ -28,9 +28,9 @@ FpgaAccelerator::FpgaAccelerator() {
  * @brief Distruttore della classe FpgaAccelerator.
  *
  * Aggiunge una barriera di sincronizzazione con clFinish() per garantire che
- * tutti i comandi in coda (inclusi gli 'Unmap' dell'ultima esecuzione) siano
- * completati, poi rilascia tutte le risorse OpenCL allocate, ovvero i buffer,
- * il kernel, il programma, la coda di comandi e il contesto.
+ * tutti i comandi in coda siano completati, poi rilascia tutte le risorse
+ * OpenCL allocate, ovvero i buffer, il kernel, il programma, la coda di comandi
+ * e il contesto.
  */
 FpgaAccelerator::~FpgaAccelerator() {
    // Barriera di sincronizzazione
@@ -246,7 +246,7 @@ void FpgaAccelerator::execute(void *generic_task, long long &computed_ns) {
    // Copia il risultato nel vettore di output del task.
    std::memcpy(task->c, ptrC, required_size_bytes);
 
-   // Rilascio della mappatura dei buffer.
+   // Rilascio delle mappe dei buffer.
    OCL_CHECK(ret, clEnqueueUnmapMemObject(queue_, bufferA, ptrA, 0, NULL, NULL),
              return);
    OCL_CHECK(ret, clEnqueueUnmapMemObject(queue_, bufferB, ptrB, 0, NULL, NULL),

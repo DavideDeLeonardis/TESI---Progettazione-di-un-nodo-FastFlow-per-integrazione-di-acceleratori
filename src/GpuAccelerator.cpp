@@ -19,7 +19,9 @@
 /**
  * @brief Costruttore della classe GpuAccelerator.
  */
-GpuAccelerator::GpuAccelerator() { std::cerr << "[GpuAccelerator] Created.\n"; }
+GpuAccelerator::GpuAccelerator() { 
+   std::cerr << "[GpuAccelerator] Created.\n"; 
+}
 
 /**
  * @brief Distruttore della classe GpuAccelerator.
@@ -50,7 +52,7 @@ GpuAccelerator::~GpuAccelerator() {
 /**
  * @brief Inizializza l'ambiente OpenCL per l'uso della GPU.
  *
- * Esegue tutte le operazioni di setup una tantum: trova il dispositivo,
+ * Esegue tutte le operazioni di setup una sola volta: trova il dispositivo,
  * crea il contesto e la coda di comandi, legge il sorgente del kernel,
  * lo compila e prepara l'oggetto kernel per l'esecuzione.
  */

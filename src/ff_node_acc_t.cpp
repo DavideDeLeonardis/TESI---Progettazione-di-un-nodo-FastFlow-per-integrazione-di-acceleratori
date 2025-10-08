@@ -8,7 +8,11 @@ static char sentinel_obj;
 void *const ff_node_acc_t::SENTINEL = &sentinel_obj;
 
 /**
- * Riceve le sue dipendenze (l'acceleratore e la promise)
+ * @brief Costruttore del nodo con acceleratore hardware
+ *
+ * @param acc Puntatore ad un'implementazione dell'acceleratore.
+ * @param count_promise Una std::promise per il conteggio finale dei task.
+ *
  */
 ff_node_acc_t::ff_node_acc_t(std::unique_ptr<IAccelerator> acc,
                              std::promise<size_t> &&count_promise)
