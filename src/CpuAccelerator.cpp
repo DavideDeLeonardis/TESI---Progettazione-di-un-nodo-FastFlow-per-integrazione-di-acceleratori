@@ -12,7 +12,7 @@ CpuAccelerator::~CpuAccelerator() {
 }
 
 bool CpuAccelerator::initialize() {
-   std::cerr << "[CpuAccelerator] Initializing...\n";
+   std::cerr << "[CpuAccelerator] Initialization successful.\n";
    return true;
 }
 
@@ -32,12 +32,11 @@ void CpuAccelerator::execute(void *generic_task, long long &computed_ns) {
    // Esegue la somma vettoriale
    // std::transform è altamente ottimizzato e può sfruttare le istruzioni
    // vettoriali (SIMD) della CPU per accelerare il calcolo.
-   std::transform(
-      task->a,           // Inizio del primo vettore di input
-      task->a + task->n, // Fine del primo vettore di input
-      task->b,           // Inizio del secondo vettore di input
-      task->c,           // Inizio del vettore di output
-      [](int x, int y) { return x + y; }); // Somma
+   std::transform(task->a,           // Inizio del primo vettore di input
+                  task->a + task->n, // Fine del primo vettore di input
+                  task->b,           // Inizio del secondo vettore di input
+                  task->c,           // Inizio del vettore di output
+                  [](int x, int y) { return x + y; }); // Somma
 
    auto t1 = std::chrono::steady_clock::now();
    computed_ns =
