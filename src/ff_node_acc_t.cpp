@@ -160,19 +160,15 @@ void ff_node_acc_t::consumerLoop() {
  * thread non sono terminati, forzando la pipeline ad attendere.
  */
 void ff_node_acc_t::svc_end() {
-   // Invia un'ultima sentinella per garantire lo sblocco dei thread,
-   // specialmente se la pipeline si chiude prima che EOS sia stato ricevuto.
-   if (inQ_) {
+   // Invia un'ultima sentinella per garantire lo sblocco dei thread.
+   if (inQ_)
       inQ_->push(SENTINEL);
-   }
 
-   // Attende la terminazione dei thread interni.
-   if (prodTh_.joinable()) {
+   // Attende la terminazione effettiva dei thread interni.
+   if (prodTh_.joinable())
       prodTh_.join();
-   }
-   if (consTh_.joinable()) {
+   if (consTh_.joinable())
       consTh_.join();
-   }
 
    std::cerr << "\n[Accelerator Node] Shutdown complete.\n";
 }
