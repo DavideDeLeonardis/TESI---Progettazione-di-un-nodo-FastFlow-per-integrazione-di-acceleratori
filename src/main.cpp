@@ -65,20 +65,44 @@ class Emitter : public ff::ff_node {
    size_t tasks_to_send;
    size_t tasks_sent;
    int *a_ptr_, *b_ptr_, *c_ptr_;
-   size_t n_; // Dimensione dei vettori
+   size_t n_;                // Dimensione dei vettori
    std::vector<int> a, b, c; // I vettori che possiedono i dati.
 };
 
-/* --------------- main --------------- */
+// Helper per stampare le istruzioni d'uso
+void print_usage(const char *prog_name) {
+   std::cerr << "Usage: " << prog_name << " [N] [NUM_TASKS] [DEVICE]\n"
+             << "  N          : Size of the vectors (default: 1,000,000)\n"
+             << "  NUM_TASKS  : Number of tasks to run (default: 50)\n"
+             << "  DEVICE     : 'cpu', 'gpu', or 'fpga' (default: 'cpu')\n"
+             << "\nExample: " << prog_name << " 16777216 100 fpga\n";
+}
+
 int main(int argc, char *argv[]) {
-   // Parsing degli argomenti da riga di comando con valori di default.
-   // Arg 1: Dimensione del vettore (N)
-   // Arg 2: Numero di task da eseguire (NUM_TASKS)
-   // Arg 3: Tipo di device ('cpu', 'gpu', 'fpga')
-   // Default: N=1'000'000, NUM_TASKS=50, device='cpu'
-   size_t N = (argc > 1 ? std::stoull(argv[1]) : 1'000'000);
-   size_t NUM_TASKS = (argc > 2 ? std::stoull(argv[2]) : 50);
-   std::string device_type = (argc > 3 ? argv[3] : "cpu");
+   // ------ Parsing degli argomenti della riga di comando ------
+   if (argc > 1 &&
+       (std::string(argv[1]) == "-h" || std::string(argv[1]) == "--help")) {
+      print_usage(argv[0]);
+      return 0;
+   }
+
+   size_t N = 1000000;
+   size_t NUM_TASKS = 50;
+   std::string device_type = "cpu";
+
+   try {
+      if (argc > 1)
+         N = std::stoull(argv[1]);
+      if (argc > 2)
+         NUM_TASKS = std::stoull(argv[2]);
+      if (argc > 3)
+         device_type = argv[3];
+   } catch (const std::invalid_argument &e) {
+      std::cerr << "[ERROR] Invalid numeric argument provided.\n\n";
+      print_usage(argv[0]);
+      return -1;
+   }
+   // /----- Parsing degli argomenti della riga di comando ------
 
    std::cout << "\nConfiguration: N=" << N << ", NUM_TASKS=" << NUM_TASKS
              << ", Device=" << device_type << "\n\n";
@@ -92,11 +116,14 @@ int main(int argc, char *argv[]) {
       accelerator = std::make_unique<FpgaAccelerator>();
    } else if (device_type == "gpu") {
       accelerator = std::make_unique<GpuAccelerator>();
-   } else {
+   } else if (device_type == "cpu") {
       accelerator = std::make_unique<CpuAccelerator>();
+   } else {
+      std::cerr << "[ERROR] Invalid device type '" << device_type << "'.\n\n";
+      print_usage(argv[0]);
+      return -1;
    }
 
-   // Verifica che tutti i task siano stati processati
    std::promise<size_t> count_promise;
    std::future<size_t> count_future = count_promise.get_future();
 
@@ -124,19 +151,19 @@ int main(int argc, char *argv[]) {
    // Raccolta dei risultati in nanosecondi
    auto ns_elapsed =
       std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
-   auto us_computed = accNode.getComputeTime_ns();
+   auto ns_computed = accNode.getComputeTime_ns();
 
    std::cout << "-------------------------------------------\n"
              << "Total time for " << NUM_TASKS << " tasks on " << device_type
              << ":\n"
              << "N=" << N << " elapsed=" << ns_elapsed << " ns"
-             << ", computed=" << us_computed << " ns\n"
+             << ", computed=" << ns_computed << " ns\n"
              << "-------------------------------------------\n"
              << "Average time per task:\n"
              << "Avg elapsed=" << ns_elapsed / (NUM_TASKS == 0 ? 1 : NUM_TASKS)
              << " ns/task\n"
              << "Avg computed="
-             << us_computed / (NUM_TASKS == 0 ? 1 : NUM_TASKS) << " ns/task\n"
+             << ns_computed / (NUM_TASKS == 0 ? 1 : NUM_TASKS) << " ns/task\n"
              << "-------------------------------------------\n"
              << "Tasks processed: " << final_count << " / " << NUM_TASKS
              << (final_count == NUM_TASKS ? " (SUCCESS)" : " (FAILURE)") << "\n"
