@@ -1,0 +1,101 @@
+// MISURATIONS
+
+// MacOS: 
+      Total time for 100 tasks on cpu:
+      N=1000000 elapsed=258118959 ns, computed=256545627 ns
+      -------------------------------------------
+      Average time per task:
+      Avg elapsed=2581189 ns/task
+      Avg computed=2565456 ns/task
+
+
+      Total time for 100 tasks on cpu:
+      N=16777216 elapsed=4247207959 ns, computed=4243799578 ns
+      -------------------------------------------
+      Average time per task:
+      Avg elapsed=42472079 ns/task
+      Avg computed=42437995 ns/task
+
+
+      Total time for 100 tasks on cpu:
+      N=33554432 elapsed=8660183833 ns, computed=8656113251 ns
+      -------------------------------------------
+      Average time per task:
+      Avg elapsed=86601838 ns/task
+      Avg computed=86561132 ns/task
+
+
+      Total time for 100 tasks on gpu:
+      N=1000000 elapsed=206239833 ns, computed=135554254 ns
+      -------------------------------------------
+      Average time per task:
+      Avg elapsed=2062398 ns/task
+      Avg computed=1355542 ns/task
+
+
+      Total time for 100 tasks on gpu:
+      N=16777216 elapsed=1510356208 ns, computed=1421344667 ns
+      -------------------------------------------
+      Average time per task:
+      Avg elapsed=15103562 ns/task
+      Avg computed=14213446 ns/task
+
+
+      Total time for 100 tasks on gpu:
+      N=33554432 elapsed=3058063209 ns, computed=2975647419 ns
+      -------------------------------------------
+      Average time per task:
+      Avg elapsed=30580632 ns/task
+      Avg computed=29756474 ns/task
+
+
+
+// VM Linux:
+      Total time for 100 tasks on cpu:
+      N=1000000 elapsed=524191982 ns, computed=522724777 ns
+      -------------------------------------------
+      Average time per task:
+      Avg elapsed=5241919 ns/task
+      Avg computed=5227247 ns/task
+
+
+      Total time for 100 tasks on cpu:
+      N=16777216 elapsed=9378516821 ns, computed=9375350268 ns
+      -------------------------------------------
+      Average time per task:
+      Avg elapsed=93785168 ns/task
+      Avg computed=93753502 ns/task
+
+
+      Total time for 100 tasks on cpu:
+      N=33554432 elapsed=18773550728 ns, computed=18770462972 ns
+      -------------------------------------------
+      Average time per task:
+      Avg elapsed=187735507 ns/task
+      Avg computed=187704629 ns/task
+
+
+      Total time for 100 tasks on fpga:
+      N=1000000 elapsed=1254887641 ns, computed=935549605 ns
+      -------------------------------------------
+      Average time per task:
+      Avg elapsed=12548876 ns/task
+      Avg computed=9355496 ns/task
+
+
+      Total time for 100 tasks on fpga:
+      N=16777216 elapsed=15391595935 ns, computed=15073137283 ns
+      -------------------------------------------
+      Average time per task:
+      Avg elapsed=153915959 ns/task
+      Avg computed=150731372 ns/task
+
+
+      Total time for 100 tasks on fpga:
+      N=33554432 elapsed=15196495414 ns, computed=0 ns
+      -------------------------------------------
+      Average time per task:
+      Avg elapsed=151964954 ns/task
+      Avg computed= NOT VALID
+
+
