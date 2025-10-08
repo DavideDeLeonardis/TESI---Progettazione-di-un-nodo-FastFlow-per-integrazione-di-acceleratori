@@ -19,7 +19,7 @@ L'account è deleonardis, la macchina è
 
 
 
-DEVO ANCORA RIUTILIZZARE I BUFFER di memoria sulla GPU/FPGA (su CPU sono riutilizzati):
+DONE!!!!!! ----- DEVO ANCORA RIUTILIZZARE I BUFFER di memoria sulla GPU/FPGA (su CPU sono riutilizzati):
    Spostare l'Allocazione: Spostare le chiamate clCreateBuffer dal metodo execute() al metodo initialize() degli adapter. I cl_mem (bufferA, bufferB, bufferC) diventerebbero membri privati delle classi GpuAccelerator e FpgaAccelerator.
    Semplificare execute: Il metodo execute() non dovrebbe più allocare e deallocare, ma solo orchestrare i trasferimenti di dati (Write, Read) e l'esecuzione del kernel, usando i buffer pre-allocati.
    Spostare la Deallocazione: Le chiamate clReleaseMemObject andrebbero spostate nel distruttore degli adapter.
@@ -134,19 +134,14 @@ L'architettura a 3 stadi con questo nodo asincrono è instabile in FastFlow => u
 
 2. La Gerarchia delle Performance per la Somma Vettoriale
 Per questo specifico task (somma vettoriale), i tuoi dati mostrano una chiara gerarchia di performance in termini di throughput:
-GPU > CPU > FPGA
-
+   GPU > CPU > FPGA
 Questo è un risultato controintuitivo e molto valido. Dimostra che non sempre l'hardware più specializzato è il più veloce e che la natura del problema è fondamentale.
 
 3. Analisi: "Il Martello Giusto per il Chiodo Giusto"
 Questo è il cuore della tua analisi. Perché l'FPGA, un acceleratore hardware, è risultata più lenta della CPU?
-
 Task Memory-Bound: La somma vettoriale è un'operazione estremamente semplice, limitata non dalla potenza di calcolo, ma dalla velocità con cui si possono leggere e scrivere dati dalla memoria (memory-bound).
-
 Ottimizzazione di CPU e GPU: Le CPU e le GPU moderne sono macchine potentissime e altamente ottimizzate per questo tipo di accesso lineare alla memoria, con cache sofisticate e bus di memoria molto ampi.
-
 Forza dell'FPGA: La vera forza di un'FPGA non è eseguire task semplici, ma implementare pipeline di calcolo complesse e customizzate che non esistono su una CPU/GPU. Ad esempio, algoritmi di compressione video, elaborazione di segnali radio, crittografia, dove i dati fluiscono attraverso una catena di montaggio hardware su misura. Per un task così semplice, l'overhead di comunicazione con la scheda e la sua architettura di memoria generica non riescono a competere.
-
 Usare un'FPGA per una somma vettoriale è come usare un bisturi chirurgico specializzato per aprire una scatola di cartone: funziona, ma un semplice taglierino (la CPU/GPU) è più efficiente per quel compito specifico.
 
 4. Overhead di Inizializzazione
