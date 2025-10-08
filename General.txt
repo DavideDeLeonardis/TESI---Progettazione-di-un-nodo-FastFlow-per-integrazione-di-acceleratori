@@ -24,6 +24,9 @@ DEVO ANCORA RIUTILIZZARE I BUFFER di memoria sulla GPU/FPGA (su CPU sono riutili
    Semplificare execute: Il metodo execute() non dovrebbe più allocare e deallocare, ma solo orchestrare i trasferimenti di dati (Write, Read) e l'esecuzione del kernel, usando i buffer pre-allocati.
    Spostare la Deallocazione: Le chiamate clReleaseMemObject andrebbero spostate nel distruttore degli adapter.
 
+   L'obiettivo è eliminare le costose operazioni di allocazione (clCreateBuffer) e deallocazione (clReleaseMemObject) della memoria per ogni singolo task, riutilizzando invece gli stessi buffer pre-allocati.
+
+
 
 
 Punti chiave da ricordare:
@@ -37,23 +40,8 @@ Punti chiave da ricordare:
 rm -rf build; cmake -B build && cmake --build build && ./build/tesi-exec 1000000 2 gpu
 
 
-
-rm -rf external/fastflow
-git clone https://github.com/fastflow/fastflow.git external/fastflow
-
-
-
-CON 1 TASK:
-      // CPU Baseline misurations (compute vs end-to-end)
-      N=1000000 elapsed=3505 µs, computed=2592 µs
-      N=16777216 elapsed=48578 µs, computed=47575 µs
-      N=67108864 elapsed=195334 µs, computed=194395 µs
-
-
-      // GPU Misurations
-      N=1000000 elapsed=76909 µs, computed=3082 µs
-      N=16777216 elapsed=107509 µs, computed=25200 µs
-      N=67108864 elapsed=256557 µs, computed=162111 µs
+Per VM - FF version:
+   rm -rf external/fastflow; git clone https://github.com/fastflow/fastflow.git external/fastflow
 
 
 
@@ -90,9 +78,8 @@ Come avevamo ipotizzato, questo costo è quasi interamente dovuto all'inizializz
 Poiché stiamo eseguendo un singolo task, questo costo fisso iniziale non viene mai ammortizzato e domina completamente il tempo di esecuzione totale. 
 
 
-4. Lezione Pratica sulla Legge di Amdahl e l'Ammortamento
+4. Lezione sulla Legge di Amdahl e l'Ammortamento
 Questi risultati sono una perfetta dimostrazione pratica della Legge di Amdahl. La parte "seriale" del nostro programma (l'inizializzazione di OpenCL) è così lenta che, anche se acceleriamo la parte "parallela" (il calcolo), il guadagno totale è negativo per un singolo task.
-
 Questo dimostra in modo conclusivo che l'offloading su acceleratori ha senso solo in scenari ad alto throughput, dove il costo di setup viene "spalmato" su un gran numero di operazioni.
 
 

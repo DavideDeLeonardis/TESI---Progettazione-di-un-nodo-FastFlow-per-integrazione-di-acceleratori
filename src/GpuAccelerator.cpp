@@ -4,9 +4,7 @@
 #include <iostream>
 #include <vector>
 
-// Macro per un controllo robusto degli errori OpenCL.
-// Esegue una chiamata API, controlla il codice di ritorno e, in caso di errore,
-// stampa un messaggio dettagliato ed esegue l'azione specificata.
+// Macro per il controllo degli errori OpenCL.
 #define OCL_CHECK(err_code, call, on_error_action)                             \
    do {                                                                        \
       err_code = (call);                                                       \
@@ -18,17 +16,31 @@
       }                                                                        \
    } while (0)
 
+// Macro specifica per initialize, ritorna false in caso di errore.
+#define OCL_CHECK_INIT(error, call) OCL_CHECK(error, call, return false)
+
+// Macro specifica per execute, che termina la funzione in caso di errore.
+#define OCL_CHECK_EXEC(error, call) OCL_CHECK(error, call, return)
+
+/**
+ * @brief Costruttore della classe GpuAccelerator.
+ */
 GpuAccelerator::GpuAccelerator() { std::cerr << "[GpuAccelerator] Created.\n"; }
 
 /**
  * @brief Distruttore della classe GpuAccelerator.
  *
- * Si occupa di rilasciare in modo sicuro tutte le risorse OpenCL allocate
- * durante il ciclo di vita dell'oggetto. Le risorse vengono rilasciate in
- * ordine inverso rispetto alla loro creazione.
+ * Si occupa di rilasciare in modo sicuro tutte le risorse OpenCL allocate,
+ * ovvero i buffer, il kernel, il programma, la coda di comandi e il contesto.
  */
 GpuAccelerator::~GpuAccelerator() {
-   std::cerr << "[GpuAccelerator] Cleaning up OpenCL resources...\n";
+   if (bufferA)
+      clReleaseMemObject(bufferA);
+   if (bufferB)
+      clReleaseMemObject(bufferB);
+   if (bufferC)
+      clReleaseMemObject(bufferC);
+
    if (kernel_)
       clReleaseKernel(kernel_);
    if (program_)
@@ -37,7 +49,8 @@ GpuAccelerator::~GpuAccelerator() {
       clReleaseCommandQueue(queue_);
    if (context_)
       clReleaseContext(context_);
-   std::cerr << "[GpuAccelerator] Destroyed.\n";
+
+   std::cerr << "[GpuAccelerator] Destroyed and OpenCL resources released.\n";
 }
 
 /**
@@ -48,13 +61,9 @@ GpuAccelerator::~GpuAccelerator() {
  * lo compila e prepara l'oggetto kernel per l'esecuzione.
  */
 bool GpuAccelerator::initialize() {
-   std::cerr << "[GpuAccelerator] Initializing...\n";
+   cl_int ret; // Codice di ritorno delle chiamate OpenCL.
    cl_platform_id platform_id = NULL;
    cl_device_id device_id = NULL;
-   cl_int ret; // Codice di ritorno delle chiamate OpenCL.
-
-// Macro specifica per initialize, che ritorna 'false' in caso di errore.
-#define OCL_CHECK_INIT(error, call) OCL_CHECK(error, call, return false)
 
    // Trova una piattaforma OpenCL e un dispositivo di tipo GPU.
    OCL_CHECK_INIT(ret, clGetPlatformIDs(1, &platform_id, NULL));
@@ -123,53 +132,72 @@ bool GpuAccelerator::initialize() {
 /**
  * @brief Esegue un singolo task di somma vettoriale sulla GPU.
  *
- * Orchestra l'intero processo di offloading: allocazione della memoria sul
- * device, trasferimento dei dati, impostazione degli argomenti, esecuzione
- * del kernel e recupero dei risultati.
+ * Allocazione della memoria sul device, trasferimento dei dati, impostazione
+ * degli argomenti, esecuzione del kernel e recupero dei risultati.
  * @param generic_task Puntatore generico al task da eseguire.
  * @param computed_ns Riferimento per restituire il tempo di calcolo.
  */
 void GpuAccelerator::execute(void *generic_task, long long &computed_ns) {
    auto *task = static_cast<Task *>(generic_task);
-   std::cerr << "[GpuAccelerator - START] Offloading task with N=" << task->n
+   std::cerr << "\n[GpuAccelerator - START] Offloading task with N=" << task->n
              << "...\n";
 
    cl_int ret; // Codice di ritorno delle chiamate OpenCL.
-   size_t buffer_size = sizeof(int) * task->n;
+   size_t required_size_bytes = sizeof(int) * task->n;
 
-// Macro specifica per execute, che termina la funzione in caso di errore.
-#define OCL_CHECK_EXEC(error, call) OCL_CHECK(error, call, return)
+   // Se se la dimensione del task corrente è diversa da quella dei buffer già
+   // esistenti, rialloca i buffer.
+   if (allocated_size_bytes_ != required_size_bytes) {
+      std::cerr << "  [GpuAccelerator - DEBUG] Buffer size mismatch. "
+                   "Reallocating buffers for "
+                << required_size_bytes << " bytes...\n";
 
-   // Allocazione dei buffer di memoria sulla GPU (device memory).
-   cl_mem bufferA =
-      clCreateBuffer(context_, CL_MEM_READ_ONLY, buffer_size, NULL, &ret);
-   if (!bufferA || ret != CL_SUCCESS) {
-      std::cerr << "[ERROR] Failed to create bufferA. Code: " << ret << "\n";
-      return;
-   }
-   cl_mem bufferB =
-      clCreateBuffer(context_, CL_MEM_READ_ONLY, buffer_size, NULL, &ret);
-   if (!bufferB || ret != CL_SUCCESS) {
-      std::cerr << "[ERROR] Failed to create bufferB. Code: " << ret << "\n";
-      return;
-   }
-   cl_mem bufferC =
-      clCreateBuffer(context_, CL_MEM_WRITE_ONLY, buffer_size, NULL, &ret);
-   if (!bufferC || ret != CL_SUCCESS) {
-      std::cerr << "[ERROR] Failed to create bufferC. Code: " << ret << "\n";
-      return;
+      // Rilascia i vecchi buffer prima di crearne di nuovi
+      if (bufferA)
+         clReleaseMemObject(bufferA);
+      if (bufferB)
+         clReleaseMemObject(bufferB);
+      if (bufferC)
+         clReleaseMemObject(bufferC);
+
+      // Allocazione dei buffer di memoria sulla GPU (device memory).
+      bufferA = clCreateBuffer(context_, CL_MEM_READ_ONLY, required_size_bytes,
+                               NULL, &ret);
+      if (!bufferA || ret != CL_SUCCESS) {
+         std::cerr << "[ERROR] Failed to create bufferA. Code: " << ret << "\n";
+         return;
+      }
+
+      bufferB = clCreateBuffer(context_, CL_MEM_READ_ONLY, required_size_bytes,
+                               NULL, &ret);
+      if (!bufferB || ret != CL_SUCCESS) {
+         std::cerr << "[ERROR] Failed to create bufferB. Code: " << ret << "\n";
+         return;
+      }
+
+      bufferC = clCreateBuffer(context_, CL_MEM_WRITE_ONLY, required_size_bytes,
+                               NULL, &ret);
+      if (!bufferC || ret != CL_SUCCESS) {
+         std::cerr << "[ERROR] Failed to create bufferC. Code: " << ret << "\n";
+         return;
+      }
+
+      allocated_size_bytes_ = required_size_bytes;
+   } else {
+      std::cerr
+         << "  [GpuAccelerator - DEBUG] Reusing existing device buffers.\n";
    }
 
+   // Inizio misurazione tempo di esecuzione
    auto t0 = std::chrono::steady_clock::now();
 
-   // Trasferimento dei dati dalla memoria host (RAM) alla memoria device
-   // (VRAM).
-   OCL_CHECK_EXEC(ret,
-                  clEnqueueWriteBuffer(queue_, bufferA, CL_TRUE, 0, buffer_size,
-                                       task->a, 0, NULL, NULL));
-   OCL_CHECK_EXEC(ret,
-                  clEnqueueWriteBuffer(queue_, bufferB, CL_TRUE, 0, buffer_size,
-                                       task->b, 0, NULL, NULL));
+   // Trasferimento dati dalla memoria host (RAM) alla memoria device (VRAM).
+   OCL_CHECK_EXEC(ret, clEnqueueWriteBuffer(queue_, bufferA, CL_TRUE, 0,
+                                            required_size_bytes, task->a, 0,
+                                            NULL, NULL));
+   OCL_CHECK_EXEC(ret, clEnqueueWriteBuffer(queue_, bufferB, CL_TRUE, 0,
+                                            required_size_bytes, task->b, 0,
+                                            NULL, NULL));
 
    // Impostazione degli argomenti del kernel.
    OCL_CHECK_EXEC(ret, clSetKernelArg(kernel_, 0, sizeof(cl_mem), &bufferA));
@@ -185,21 +213,17 @@ void GpuAccelerator::execute(void *generic_task, long long &computed_ns) {
                                               NULL));
 
    // Trasferimento dei risultati dalla memoria device alla memoria host.
-   OCL_CHECK_EXEC(ret,
-                  clEnqueueReadBuffer(queue_, bufferC, CL_TRUE, 0, buffer_size,
-                                      task->c, 0, NULL, NULL));
+   OCL_CHECK_EXEC(ret, clEnqueueReadBuffer(queue_, bufferC, CL_TRUE, 0,
+                                           required_size_bytes, task->c, 0,
+                                           NULL, NULL));
 
    // Sincronizzazione.
    OCL_CHECK_EXEC(ret, clFinish(queue_));
 
+   // Fine misurazione tempo di esecuzione
    auto t1 = std::chrono::steady_clock::now();
    computed_ns =
       std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
-
-   // Rilascio dei buffer di memoria sul device, libera le risorse.
-   clReleaseMemObject(bufferA);
-   clReleaseMemObject(bufferB);
-   clReleaseMemObject(bufferC);
 
    std::cerr << "[GpuAccelerator - END] Task execution finished.\n";
 }

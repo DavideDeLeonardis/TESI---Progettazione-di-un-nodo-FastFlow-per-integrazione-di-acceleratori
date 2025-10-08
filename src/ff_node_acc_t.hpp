@@ -1,14 +1,10 @@
 #pragma once
+#include "../include/ff_includes.hpp"
 #include "../include/types.hpp"
 #include "IAccelerator.hpp"
-#include <ff/pipeline.hpp>
-#include <ff/farm.hpp>
-#include <ff/all2all.hpp>
-#include <ff/graph_utils.hpp>
-#include <ff/ubuffer.hpp>
 #include <atomic>
-#include <iostream>
 #include <future>
+#include <iostream>
 #include <memory>
 #include <thread>
 
@@ -49,15 +45,15 @@ class ff_node_acc_t : public ff_node {
    // std::unique_ptr garantisce la gestione automatica della memoria.
    std::unique_ptr<IAccelerator> accelerator_;
 
-   // Tipi per le code interne Single-Producer/Single-Consumer.
+   // Code interne Single-Producer/Single-Consumer.
    using TaskQ = uSWSR_Ptr_Buffer;
    using ResultQ = uSWSR_Ptr_Buffer;
    TaskQ *inQ_{nullptr};
    ResultQ *outQ_{nullptr};
 
-   // Contatore atomico per il tempo di calcolo totale.
+   // Contatore per il tempo di calcolo totale e membri dedicati alla verifica
+   // finale del conteggio dei task.
    std::atomic<long long> computed_ns_{0};
-   // Membri dedicati alla verifica finale del conteggio dei task.
    std::atomic<size_t> tasks_processed_{0};
    std::promise<size_t> count_promise_;
 

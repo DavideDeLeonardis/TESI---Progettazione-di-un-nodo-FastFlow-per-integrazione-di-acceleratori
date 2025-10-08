@@ -21,7 +21,7 @@
 class Emitter : public ff::ff_node {
  public:
    /**
-    * @param n La dimensione dei vettori da processare.
+    * @param n Dimensione dei vettori da processare.
     * @param num_tasks Il numero totale di task da generare.
     */
    explicit Emitter(size_t n, size_t num_tasks)
@@ -34,6 +34,7 @@ class Emitter : public ff::ff_node {
          a[i] = int(i);
          b[i] = int(2 * i);
       }
+
       // Salviamo i puntatori ai dati e la dimensione per creare i Task.
       a_ptr_ = a.data();
       b_ptr_ = b.data();
@@ -47,13 +48,15 @@ class Emitter : public ff::ff_node {
    void *svc(void *) override {
       if (tasks_sent < tasks_to_send) {
          tasks_sent++;
-         // FONDAMENTALE: viene creato un NUOVO oggetto Task sulla heap per ogni
-         // invio. Essenziale in un ambiente multi-thread per garantire
-         // che ogni task abbia un ciclo di vita indipendente e per evitare
-         // race condition. Il nodo successivo sarà responsabile di deallocare
-         // questa memoria con 'delete'.
+
+         // Viene creato un NUOVO oggetto Task sulla heap per ogni invio.
+         // Essenziale in un ambiente multi-thread per garantire che ogni task
+         // abbia un ciclo di vita indipendente e per evitare race condition. Il
+         // nodo successivo sarà responsabile di deallocare questa memoria con
+         // 'delete'.
          return new Task{a_ptr_, b_ptr_, c_ptr_, n_};
       }
+
       // Una volta inviati tutti i task, invia il segnale di fine stream (EOS).
       return FF_EOS;
    }
@@ -62,7 +65,7 @@ class Emitter : public ff::ff_node {
    size_t tasks_to_send;
    size_t tasks_sent;
    int *a_ptr_, *b_ptr_, *c_ptr_;
-   size_t n_;
+   size_t n_; // Dimensione dei vettori
    std::vector<int> a, b, c; // I vettori che possiedono i dati.
 };
 
@@ -72,9 +75,9 @@ int main(int argc, char *argv[]) {
    // Arg 1: Dimensione del vettore (N)
    // Arg 2: Numero di task da eseguire (NUM_TASKS)
    // Arg 3: Tipo di device ('cpu', 'gpu', 'fpga')
-   // Default: N=1'000'000, NUM_TASKS=100, device='cpu'
+   // Default: N=1'000'000, NUM_TASKS=50, device='cpu'
    size_t N = (argc > 1 ? std::stoull(argv[1]) : 1'000'000);
-   size_t NUM_TASKS = (argc > 2 ? std::stoull(argv[2]) : 100);
+   size_t NUM_TASKS = (argc > 2 ? std::stoull(argv[2]) : 50);
    std::string device_type = (argc > 3 ? argv[3] : "cpu");
 
    std::cout << "\nConfiguration: N=" << N << ", NUM_TASKS=" << NUM_TASKS
@@ -83,7 +86,7 @@ int main(int argc, char *argv[]) {
    // Creazione dei componenti della pipeline
    Emitter emitter(N, NUM_TASKS);
 
-   // Selezione e creazione dell'acceleratore (Pattern Strategy/Factory)
+   // Selezione e creazione dell'acceleratore
    std::unique_ptr<IAccelerator> accelerator;
    if (device_type == "fpga") {
       accelerator = std::make_unique<FpgaAccelerator>();
@@ -102,11 +105,13 @@ int main(int argc, char *argv[]) {
 
    // Composizione e avvio della pipeline
    // La pipeline è composta da 2 stadi: l'Emitter che produce i Task e
-   // l'accNode che li consuma, li processa e li conta.
+   // l'accNode che li processa e li conta.
    ff::ff_Pipe<> pipe(false, &emitter, &accNode);
 
    std::cout << "[Main] Starting pipeline execution...\n";
    auto t0 = std::chrono::steady_clock::now();
+
+   // Avvio della pipeline e attesa del completamento
    if (pipe.run_and_wait_end() < 0) {
       std::cerr << "[ERROR] Main: Pipeline execution failed.\n";
       return -1;

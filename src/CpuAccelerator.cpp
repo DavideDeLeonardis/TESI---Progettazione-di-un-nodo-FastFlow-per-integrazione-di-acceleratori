@@ -24,10 +24,8 @@ bool CpuAccelerator::initialize() {
  * @param computed_ns Riferimento per restituire il tempo di calcolo misurato.
  */
 void CpuAccelerator::execute(void *generic_task, long long &computed_ns) {
-   // Esegue il cast del puntatore generico al tipo di dato specifico (Task)
-   // che questo acceleratore sa come gestire.
    auto *task = static_cast<Task *>(generic_task);
-   std::cerr << "[CpuAccelerator - START] Executing task with N=" << task->n << "...\n";
+   std::cerr << "\n[CpuAccelerator - START] Executing task with N=" << task->n << "...\n";
 
    auto t0 = std::chrono::steady_clock::now();
 
@@ -39,10 +37,9 @@ void CpuAccelerator::execute(void *generic_task, long long &computed_ns) {
       task->a + task->n, // Fine del primo vettore di input
       task->b,           // Inizio del secondo vettore di input
       task->c,           // Inizio del vettore di output
-      [](int x, int y) { return x + y; }); // Operazione da applicare
+      [](int x, int y) { return x + y; }); // Somma
 
    auto t1 = std::chrono::steady_clock::now();
-
    computed_ns =
       std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
 

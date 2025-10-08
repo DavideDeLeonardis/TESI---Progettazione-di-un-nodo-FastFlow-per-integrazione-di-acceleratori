@@ -4,9 +4,7 @@
 #include <iostream>
 #include <vector>
 
-// Macro per un controllo robusto degli errori OpenCL.
-// Esegue una chiamata API, controlla il codice di ritorno e, in caso di errore,
-// stampa un messaggio dettagliato ed esegue l'azione specificata.
+// Macro per il controllo degli errori OpenCL.
 #define OCL_CHECK(err_code, call, on_error_action)                             \
    do {                                                                        \
       err_code = (call);                                                       \
@@ -18,12 +16,27 @@
       }                                                                        \
    } while (0)
 
+/**
+ * @brief Costruttore della classe FpgaAccelerator.
+ */
 FpgaAccelerator::FpgaAccelerator() {
    std::cerr << "[FpgaAccelerator] Created.\n";
 }
 
+/**
+ * @brief Distruttore della classe FpgaAccelerator.
+ *
+ * Si occupa di rilasciare in modo sicuro tutte le risorse OpenCL allocate, ovvero
+ * i buffer, il kernel, il programma, la coda di comandi e il cont
+ */
 FpgaAccelerator::~FpgaAccelerator() {
-   std::cerr << "[FpgaAccelerator] Cleaning up OpenCL resources...\n";
+   if (bufferA)
+      clReleaseMemObject(bufferA);
+   if (bufferB)
+      clReleaseMemObject(bufferB);
+   if (bufferC)
+      clReleaseMemObject(bufferC);
+
    if (kernel_)
       clReleaseKernel(kernel_);
    if (program_)
@@ -32,7 +45,8 @@ FpgaAccelerator::~FpgaAccelerator() {
       clReleaseCommandQueue(queue_);
    if (context_)
       clReleaseContext(context_);
-   std::cerr << "[FpgaAccelerator] Destroyed.\n";
+
+   std::cerr << "[FpgaAccelerator] Destroyed and OpenCL resources released.\n";
 }
 
 /**
@@ -43,8 +57,7 @@ FpgaAccelerator::~FpgaAccelerator() {
  * un .xclbin
  */
 bool FpgaAccelerator::initialize() {
-   std::cerr << "[FpgaAccelerator] Initializing...\n";
-   cl_int ret;
+   cl_int ret; // Codice di ritorno delle chiamate OpenCL.
    cl_platform_id platform_id = NULL;
    cl_device_id device_id = NULL;
 
@@ -57,13 +70,12 @@ bool FpgaAccelerator::initialize() {
 
    // Creazione del contesto e della coda di comandi.
    context_ = clCreateContext(NULL, 1, &device_id, NULL, NULL, &ret);
-   if (!context_ || ret != CL_SUCCESS) {
-      std::cerr
-         << "[ERROR] FpgaAccelerator: Failed to create OpenCL context.\n";
+   if (!context_) {
+      std::cerr << "[ERROR] FpgaAccelerator: Failed creating OpenCL context.\n";
       return false;
    }
    queue_ = clCreateCommandQueue(context_, device_id, 0, &ret);
-   if (!queue_ || ret != CL_SUCCESS) {
+   if (!queue_) {
       std::cerr << "[ERROR] FpgaAccelerator: Failed to create command queue.\n";
       return false;
    }
@@ -86,6 +98,7 @@ bool FpgaAccelerator::initialize() {
    const size_t binary_sizes[] = {binarySize};
 
    // Creazione del programma OpenCL direttamente dal binario.
+   // Creazione 
    program_ = clCreateProgramWithBinary(context_, 1, &device_id, binary_sizes,
                                         binaries, NULL, &ret);
    if (!program_ || ret != CL_SUCCESS) {
@@ -93,8 +106,8 @@ bool FpgaAccelerator::initialize() {
          << "[ERROR] FpgaAccelerator: Failed to create program from binary.\n";
       return false;
    }
-   // NON è necessaria la chiamata a clBuildProgram(), perché il programma è già
-   // compilato. Questo rende l'inizializzazione dell'FPGA molto più veloce di
+   // NON è necessaria la chiamata a clBuildProgram(), il programma è già
+   // compilato e questo rende l'inizializzazione dell'FPGA molto più veloce di
    // quella della GPU.
 
    // Estrazione dell'handle al kernel.
@@ -116,40 +129,66 @@ bool FpgaAccelerator::initialize() {
  */
 void FpgaAccelerator::execute(void *generic_task, long long &computed_ns) {
    auto *task = static_cast<Task *>(generic_task);
-   std::cerr << "[FpgaAccelerator - START] Offloading task with N=" << task->n
+   std::cerr << "\n[FpgaAccelerator - START] Offloading task with N=" << task->n
              << "...\n";
-   cl_int ret;
 
-   // Creazione buffer e trasferimento dati
-   size_t buffer_size = sizeof(int) * task->n;
-   cl_mem bufferA =
-      clCreateBuffer(context_, CL_MEM_READ_ONLY, buffer_size, NULL, &ret);
-   if (!bufferA || ret != CL_SUCCESS) {
-      std::cerr << "[ERROR] FpgaAccelerator: Failed to create bufferA.\n";
-      return;
-   }
-   cl_mem bufferB =
-      clCreateBuffer(context_, CL_MEM_READ_ONLY, buffer_size, NULL, &ret);
-   if (!bufferB || ret != CL_SUCCESS) {
-      std::cerr << "[ERROR] FpgaAccelerator: Failed to create bufferB.\n";
-      return;
-   }
-   cl_mem bufferC =
-      clCreateBuffer(context_, CL_MEM_WRITE_ONLY, buffer_size, NULL, &ret);
-   if (!bufferC || ret != CL_SUCCESS) {
-      std::cerr << "[ERROR] FpgaAccelerator: Failed to create bufferC.\n";
-      return;
+   cl_int ret; // Codice di ritorno delle chiamate OpenCL.
+   size_t required_size_bytes = sizeof(int) * task->n;
+
+   // Se se la dimensione del task corrente è diversa da quella dei buffer già
+   // esistenti, rialloca i buffer.
+   if (allocated_size_bytes_ != required_size_bytes) {
+      std::cerr << "  [FpgaAccelerator - DEBUG] Buffer size mismatch. "
+                   "Reallocating buffers for "
+                << required_size_bytes << " bytes...\n";
+
+      // Rilascia i vecchi buffer prima di crearne di nuovi
+      if (bufferA)
+         clReleaseMemObject(bufferA);
+      if (bufferB)
+         clReleaseMemObject(bufferB);
+      if (bufferC)
+         clReleaseMemObject(bufferC);
+
+      // Allocazione dei nuovi buffer sulla memoria del device.
+      bufferA = clCreateBuffer(context_, CL_MEM_READ_ONLY, required_size_bytes,
+                               NULL, &ret);
+      if (!bufferA || ret != CL_SUCCESS) {
+         std::cerr << "[ERROR] FpgaAccelerator: Failed to create bufferA.\n";
+         return;
+      }
+
+      bufferB = clCreateBuffer(context_, CL_MEM_READ_ONLY, required_size_bytes,
+                               NULL, &ret);
+      if (!bufferB || ret != CL_SUCCESS) {
+         std::cerr << "[ERROR] FpgaAccelerator: Failed to create bufferB.\n";
+         return;
+      }
+
+      bufferC = clCreateBuffer(context_, CL_MEM_WRITE_ONLY, required_size_bytes,
+                               NULL, &ret);
+      if (!bufferC || ret != CL_SUCCESS) {
+         std::cerr << "[ERROR] FpgaAccelerator: Failed to create bufferC.\n";
+         return;
+      }
+
+      allocated_size_bytes_ = required_size_bytes;
+   } else {
+      std::cerr
+         << "  [FpgaAccelerator - DEBUG] Reusing existing device buffers.\n";
    }
 
+   // Inizio misurazione tempo di esecuzione
    auto t0 = std::chrono::steady_clock::now();
 
+   // Trasferimento dati
    OCL_CHECK(ret,
-             clEnqueueWriteBuffer(queue_, bufferA, CL_TRUE, 0, buffer_size,
-                                  task->a, 0, NULL, NULL),
+             clEnqueueWriteBuffer(queue_, bufferA, CL_TRUE, 0,
+                                  required_size_bytes, task->a, 0, NULL, NULL),
              return);
    OCL_CHECK(ret,
-             clEnqueueWriteBuffer(queue_, bufferB, CL_TRUE, 0, buffer_size,
-                                  task->b, 0, NULL, NULL),
+             clEnqueueWriteBuffer(queue_, bufferB, CL_TRUE, 0,
+                                  required_size_bytes, task->b, 0, NULL, NULL),
              return);
 
    // Impostazione degli argomenti del kernel.
@@ -171,21 +210,19 @@ void FpgaAccelerator::execute(void *generic_task, long long &computed_ns) {
                                     &local_work_size, 0, NULL, NULL),
              return);
 
-   // Recupero risultati, sincronizzazione, calcolo tempo di esecuzione e
-   // rilascio risorse
+   // Trasferimento dei risultati dalla memoria device alla memoria host.
    OCL_CHECK(ret,
-             clEnqueueReadBuffer(queue_, bufferC, CL_TRUE, 0, buffer_size,
-                                 task->c, 0, NULL, NULL),
+             clEnqueueReadBuffer(queue_, bufferC, CL_TRUE, 0,
+                                 required_size_bytes, task->c, 0, NULL, NULL),
              return);
+
+   // Sincronizzazione.
    OCL_CHECK(ret, clFinish(queue_), return);
 
+   // Fine misurazione tempo di esecuzione
    auto t1 = std::chrono::steady_clock::now();
    computed_ns =
       std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
-
-   clReleaseMemObject(bufferA);
-   clReleaseMemObject(bufferB);
-   clReleaseMemObject(bufferC);
 
    std::cerr << "[FpgaAccelerator - END] Task execution finished.\n";
 }

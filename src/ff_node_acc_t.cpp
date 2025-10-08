@@ -16,7 +16,7 @@ ff_node_acc_t::ff_node_acc_t(std::unique_ptr<IAccelerator> acc,
       count_promise_(std::move(count_promise)) {}
 
 /**
- * Si occupa di deallocare la memoria delle code interne.
+ * Il distruttore si occupa di deallocare la memoria delle code interne.
  * Viene chiamato solo dopo che la pipeline è terminata e i thread interni
  * sono stati chiusi in modo sicuro dal metodo svc_end().
  */
@@ -25,12 +25,13 @@ ff_node_acc_t::~ff_node_acc_t() {
    delete outQ_;
 }
 
+// Restituisce il tempo di calcolo totale in nanosecondi
 long long ff_node_acc_t::getComputeTime_ns() const {
    return computed_ns_.load();
 }
 
 /**
- * @brief Metodo di inizializzazione del nodo, chiamato da FastFlow.
+ * @brief Metodo di inizializzazione del nodo
  *
  * Prepara l'intero nodo per l'esecuzione:
  * 1. Inizializza l'acceleratore hardware.
@@ -44,6 +45,7 @@ int ff_node_acc_t::svc_init() {
       return -1;
    }
 
+   // Alloca e inizializza le code interne
    inQ_ = new TaskQ(1024);
    outQ_ = new ResultQ(1024);
    if (!inQ_->init() || !outQ_->init()) {
@@ -51,6 +53,7 @@ int ff_node_acc_t::svc_init() {
       return -1;
    }
 
+   // Crea e avvia i thread interni
    prodTh_ = std::thread(&ff_node_acc_t::producerLoop, this);
    consTh_ = std::thread(&ff_node_acc_t::consumerLoop, this);
 
@@ -108,8 +111,9 @@ void ff_node_acc_t::producerLoop() {
       }
 
       auto *task = static_cast<Task *>(ptr);
-      long long current_task_ns = 0;
+      long long current_task_ns = 0; // Tempo di calcolo per questo task
 
+      // Esegue il calcolo sull'acceleratore e misura il tempo impiegato.
       accelerator_->execute(task, current_task_ns);
       computed_ns_ += current_task_ns;
 
@@ -135,6 +139,7 @@ void ff_node_acc_t::consumerLoop() {
    while (true) {
       while (!outQ_->pop(&ptr))
          std::this_thread::yield();
+
       if (ptr == SENTINEL) {
          // Flusso terminato: comunica il conteggio finale al main e termina.
          count_promise_.set_value(tasks_processed_.load());
@@ -155,7 +160,6 @@ void ff_node_acc_t::consumerLoop() {
  * thread non sono terminati, forzando la pipeline ad attendere.
  */
 void ff_node_acc_t::svc_end() {
-   std::cerr << "[Accelerator Node] Shutting down internal threads...\n";
    // Invia un'ultima sentinella per garantire lo sblocco dei thread,
    // specialmente se la pipeline si chiude prima che EOS sia stato ricevuto.
    if (inQ_) {
@@ -170,5 +174,5 @@ void ff_node_acc_t::svc_end() {
       consTh_.join();
    }
 
-   std::cerr << "[Accelerator Node] Shutdown complete.\n";
+   std::cerr << "\n[Accelerator Node] Shutdown complete.\n";
 }
