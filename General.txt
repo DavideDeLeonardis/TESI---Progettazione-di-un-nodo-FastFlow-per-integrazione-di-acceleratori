@@ -146,3 +146,53 @@ Usare un'FPGA per una somma vettoriale è come usare un bisturi chirurgico speci
 
 4. Overhead di Inizializzazione
 I tuoi log mostrano che anche l'FPGA ha un costo di inizializzazione significativo (elapsed - computed nel primo task), dovuto al tempo necessario per caricare il file .xclbin sulla scheda e configurare il circuito. Hai dimostrato che, come per la GPU, questo costo viene ammortizzato solo in scenari a throughput elevato.
+
+
+
+
+
+
+
+
+
+
+
+Se volessi sostituire la somma vettoriale con un altro kernel, per esempio una moltiplicazione tra matrici, non dovresti toccare l'infrastruttura principale del progetto (ff_node_acc_t, la logica della pipeline, etc.). Le modifiche sarebbero mirate e contenute solo nelle parti specifiche del task.
+
+File da Modificare
+   1. I Nuovi File dei Kernel (L'Algoritmo)
+   Prima di tutto, dovresti scrivere il nuovo algoritmo. Non modificheresti i file esistenti, ma ne creeresti di nuovi.
+   Per la GPU: Creeresti un nuovo file, ad esempio matrix_mul.cl, contenente il kernel OpenCL C per la moltiplicazione di matrici.
+   Per l'FPGA: Creeresti un nuovo file C++, ad esempio kernel/krnl_matmul.cpp, con la logica per la sintesi HLS della moltiplicazione di matrici.
+
+   2. Il File dei Tipi Dati (include/types.hpp)
+   La struttura Task attuale è specifica per la somma vettoriale (tre vettori, una dimensione). Una moltiplicazione di matrici ha bisogno di dati diversi.
+   Azione: Aggiungeresti una nuova struct per descrivere il nuovo lavoro, per esempio:
+   // Esempio per una moltiplicazione di matrici C = A x B
+   struct MatrixMulTask {
+      float *matrix_a, *matrix_b, *matrix_c;
+      int width_a, height_a, width_b;
+   };
+   Anche la struct Result potrebbe dover cambiare se il risultato fosse più complesso.
+
+   3. Le Classi "Adapter" (Cpu/Gpu/FpgaAccelerator.cpp)
+   Qui è dove "collegheresti" il nuovo task e il nuovo kernel. Ogni adapter andrebbe modificato.
+   CpuAccelerator.cpp:
+   Nel metodo execute, la chiamata a std::transform verrebbe sostituita con due cicli for annidati per eseguire la moltiplicazione di matrici sulla CPU.
+   GpuAccelerator.cpp e FpgaAccelerator.cpp:
+   Nel metodo initialize, cambieresti il nome del file del kernel da caricare (es. matrix_mul.cl o il nuovo .xclbin) e il nome del kernel da estrarre (es. "matrix_mul").
+   Nel metodo execute, faresti le modifiche più sostanziose:
+   Faresti il cast del puntatore generic_task al nuovo tipo MatrixMulTask*.
+   Le chiamate clCreateBuffer creerebbero buffer con le dimensioni corrette per le matrici.
+   Le chiamate clSetKernelArg passerebbero i puntatori alle matrici e le loro dimensioni, in accordo con la firma del nuovo kernel.
+
+   4. La Classe Emitter (in main.cpp)
+   L'Emitter è responsabile di creare i dati di test.
+   Azione: Modificheresti il costruttore dell'Emitter per inizializzare due matrici di input (a e b) con valori sensati. Anche la chiamata per creare il task diventerebbe return new MatrixMulTask{...};.
+
+
+File che NON Andrebbero Modificati (La Prova della Buona Architettura)
+   IAccelerator.hpp: L'interfaccia, il "contratto", non cambia. Definisce ancora le azioni generiche initialize ed execute.
+   ff_node_acc_t.hpp e ff_node_acc_t.cpp: Il tuo "motore" asincrono a thread e code rimarrebbe identico. Non gli interessa quale calcolo venga eseguito; il suo compito è solo orchestrare il flusso di void* tra le code e delegare il lavoro all'acceleratore.
+   La funzione main() in main.cpp: La logica di creazione della pipeline, la misurazione dei tempi e il meccanismo di verifica con promise/future rimarrebbero esattamente gli stessi. L'unica riga da cambiare sarebbe quella che crea l'adapter specifico (es. accelerator = std::make_unique<MatrixMulGpuAccelerator>();).
+
