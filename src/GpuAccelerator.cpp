@@ -16,12 +16,6 @@
       }                                                                        \
    } while (0)
 
-// Macro specifica per initialize, ritorna false in caso di errore.
-#define OCL_CHECK_INIT(error, call) OCL_CHECK(error, call, return false)
-
-// Macro specifica per execute, che termina la funzione in caso di errore.
-#define OCL_CHECK_EXEC(error, call) OCL_CHECK(error, call, return)
-
 /**
  * @brief Costruttore della classe GpuAccelerator.
  */
@@ -66,9 +60,10 @@ bool GpuAccelerator::initialize() {
    cl_device_id device_id = NULL;
 
    // Trova una piattaforma OpenCL e un dispositivo di tipo GPU.
-   OCL_CHECK_INIT(ret, clGetPlatformIDs(1, &platform_id, NULL));
-   OCL_CHECK_INIT(ret, clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_GPU, 1,
-                                      &device_id, NULL));
+   OCL_CHECK(ret, clGetPlatformIDs(1, &platform_id, NULL), return false);
+   OCL_CHECK(
+      ret, clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_GPU, 1, &device_id, NULL),
+      exit(EXIT_FAILURE));
 
    // Crea un contesto OpenCL.
    context_ = clCreateContext(NULL, 1, &device_id, NULL, NULL, &ret);
@@ -192,33 +187,37 @@ void GpuAccelerator::execute(void *generic_task, long long &computed_ns) {
    auto t0 = std::chrono::steady_clock::now();
 
    // Trasferimento dati dalla memoria host (RAM) alla memoria device (VRAM).
-   OCL_CHECK_EXEC(ret, clEnqueueWriteBuffer(queue_, bufferA, CL_TRUE, 0,
-                                            required_size_bytes, task->a, 0,
-                                            NULL, NULL));
-   OCL_CHECK_EXEC(ret, clEnqueueWriteBuffer(queue_, bufferB, CL_TRUE, 0,
-                                            required_size_bytes, task->b, 0,
-                                            NULL, NULL));
+   OCL_CHECK(ret,
+             clEnqueueWriteBuffer(queue_, bufferA, CL_TRUE, 0,
+                                  required_size_bytes, task->a, 0, NULL, NULL),
+             return);
+   OCL_CHECK(ret,
+             clEnqueueWriteBuffer(queue_, bufferB, CL_TRUE, 0,
+                                  required_size_bytes, task->b, 0, NULL, NULL),
+             return);
 
    // Impostazione degli argomenti del kernel.
-   OCL_CHECK_EXEC(ret, clSetKernelArg(kernel_, 0, sizeof(cl_mem), &bufferA));
-   OCL_CHECK_EXEC(ret, clSetKernelArg(kernel_, 1, sizeof(cl_mem), &bufferB));
-   OCL_CHECK_EXEC(ret, clSetKernelArg(kernel_, 2, sizeof(cl_mem), &bufferC));
-   OCL_CHECK_EXEC(ret,
-                  clSetKernelArg(kernel_, 3, sizeof(unsigned int), &(task->n)));
+   OCL_CHECK(ret, clSetKernelArg(kernel_, 0, sizeof(cl_mem), &bufferA), return);
+   OCL_CHECK(ret, clSetKernelArg(kernel_, 1, sizeof(cl_mem), &bufferB), return);
+   OCL_CHECK(ret, clSetKernelArg(kernel_, 2, sizeof(cl_mem), &bufferC), return);
+   OCL_CHECK(ret, clSetKernelArg(kernel_, 3, sizeof(unsigned int), &(task->n)),
+             return);
 
    // Esecuzione del kernel.
    size_t global_work_size = task->n;
-   OCL_CHECK_EXEC(ret, clEnqueueNDRangeKernel(queue_, kernel_, 1, NULL,
-                                              &global_work_size, NULL, 0, NULL,
-                                              NULL));
+   OCL_CHECK(ret,
+             clEnqueueNDRangeKernel(queue_, kernel_, 1, NULL, &global_work_size,
+                                    NULL, 0, NULL, NULL),
+             return);
 
    // Trasferimento dei risultati dalla memoria device alla memoria host.
-   OCL_CHECK_EXEC(ret, clEnqueueReadBuffer(queue_, bufferC, CL_TRUE, 0,
-                                           required_size_bytes, task->c, 0,
-                                           NULL, NULL));
+   OCL_CHECK(ret,
+             clEnqueueReadBuffer(queue_, bufferC, CL_TRUE, 0,
+                                 required_size_bytes, task->c, 0, NULL, NULL),
+             return);
 
    // Sincronizzazione.
-   OCL_CHECK_EXEC(ret, clFinish(queue_));
+   OCL_CHECK(ret, clFinish(queue_), return);
 
    // Fine misurazione tempo di esecuzione
    auto t1 = std::chrono::steady_clock::now();

@@ -26,8 +26,8 @@ FpgaAccelerator::FpgaAccelerator() {
 /**
  * @brief Distruttore della classe FpgaAccelerator.
  *
- * Si occupa di rilasciare in modo sicuro tutte le risorse OpenCL allocate, ovvero
- * i buffer, il kernel, il programma, la coda di comandi e il cont
+ * Si occupa di rilasciare in modo sicuro tutte le risorse OpenCL allocate,
+ * ovvero i buffer, il kernel, il programma, la coda di comandi e il contesto.
  */
 FpgaAccelerator::~FpgaAccelerator() {
    if (bufferA)
@@ -66,7 +66,7 @@ bool FpgaAccelerator::initialize() {
    OCL_CHECK(ret,
              clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_ACCELERATOR, 1,
                             &device_id, NULL),
-             return false);
+             exit(EXIT_FAILURE));
 
    // Creazione del contesto e della coda di comandi.
    context_ = clCreateContext(NULL, 1, &device_id, NULL, NULL, &ret);
@@ -81,7 +81,6 @@ bool FpgaAccelerator::initialize() {
    }
 
    // Caricamento del file binario dell'FPGA (.xclbin).
-   std::cerr << "[FpgaAccelerator] Loading FPGA binary (krnl_vadd.xclbin)...\n";
    std::ifstream binaryFile("krnl_vadd.xclbin", std::ios::binary);
    if (!binaryFile.is_open()) {
       std::cerr << "[ERROR] FpgaAccelerator: Could not open kernel file "
@@ -98,7 +97,6 @@ bool FpgaAccelerator::initialize() {
    const size_t binary_sizes[] = {binarySize};
 
    // Creazione del programma OpenCL direttamente dal binario.
-   // Creazione 
    program_ = clCreateProgramWithBinary(context_, 1, &device_id, binary_sizes,
                                         binaries, NULL, &ret);
    if (!program_ || ret != CL_SUCCESS) {
