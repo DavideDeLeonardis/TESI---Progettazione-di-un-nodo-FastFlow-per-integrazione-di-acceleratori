@@ -1,5 +1,6 @@
 #include "FpgaAccelerator.hpp"
 #include <chrono>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <vector>
@@ -26,10 +27,16 @@ FpgaAccelerator::FpgaAccelerator() {
 /**
  * @brief Distruttore della classe FpgaAccelerator.
  *
- * Si occupa di rilasciare in modo sicuro tutte le risorse OpenCL allocate,
- * ovvero i buffer, il kernel, il programma, la coda di comandi e il contesto.
+ * Aggiunge una barriera di sincronizzazione con clFinish() per garantire che
+ * tutti i comandi in coda (inclusi gli 'Unmap' dell'ultima esecuzione) siano
+ * completati, poi rilascia tutte le risorse OpenCL allocate, ovvero i buffer,
+ * il kernel, il programma, la coda di comandi e il contesto.
  */
 FpgaAccelerator::~FpgaAccelerator() {
+   // Barriera di sincronizzazione
+   if (queue_)
+      clFinish(queue_);
+
    if (bufferA)
       clReleaseMemObject(bufferA);
    if (bufferB)
@@ -105,7 +112,7 @@ bool FpgaAccelerator::initialize() {
       return false;
    }
    // NON è necessaria la chiamata a clBuildProgram(), il programma è già
-   // compilato e questo rende l'inizializzazione dell'FPGA molto più veloce di
+   // compilato => l'inizializzazione dell'FPGA è molto più veloce di
    // quella della GPU.
 
    // Estrazione dell'handle al kernel.
@@ -179,15 +186,33 @@ void FpgaAccelerator::execute(void *generic_task, long long &computed_ns) {
    // Inizio misurazione tempo di esecuzione
    auto t0 = std::chrono::steady_clock::now();
 
-   // Trasferimento dati
-   OCL_CHECK(ret,
-             clEnqueueWriteBuffer(queue_, bufferA, CL_TRUE, 0,
-                                  required_size_bytes, task->a, 0, NULL, NULL),
-             return);
-   OCL_CHECK(ret,
-             clEnqueueWriteBuffer(queue_, bufferB, CL_TRUE, 0,
-                                  required_size_bytes, task->b, 0, NULL, NULL),
-             return);
+   // Mappatura dei buffer
+   int *ptrA =
+      (int *)clEnqueueMapBuffer(queue_, bufferA, CL_TRUE, CL_MAP_WRITE, 0,
+                                required_size_bytes, 0, NULL, NULL, &ret);
+   if (ret != CL_SUCCESS) {
+      std::cerr << "Error mapping bufferA\n";
+      return;
+   }
+
+   int *ptrB =
+      (int *)clEnqueueMapBuffer(queue_, bufferB, CL_TRUE, CL_MAP_WRITE, 0,
+                                required_size_bytes, 0, NULL, NULL, &ret);
+   if (ret != CL_SUCCESS) {
+      std::cerr << "Error mapping bufferB\n";
+      return;
+   }
+
+   // Copia i dati nei buffer mappati
+   std::memcpy(ptrA, task->a, required_size_bytes);
+   std::memcpy(ptrB, task->b, required_size_bytes);
+
+   // Migrazione dei dati dalla memoria host a quella device.
+   cl_mem input_buffers[] = {bufferA, bufferB};
+   OCL_CHECK(
+      ret,
+      clEnqueueMigrateMemObjects(queue_, 2, input_buffers, 0, 0, NULL, NULL),
+      return);
 
    // Impostazione degli argomenti del kernel.
    int n_as_int = static_cast<int>(task->n);
@@ -197,25 +222,37 @@ void FpgaAccelerator::execute(void *generic_task, long long &computed_ns) {
    OCL_CHECK(ret, clSetKernelArg(kernel_, 3, sizeof(int), &n_as_int), return);
 
    // Esecuzione del kernel.
-   // Il kernel FPGA è di tipo "single-task": viene lanciato una sola volta
-   // (global_work_size = 1). A differenza della GPU, non si lanciano N
-   // "thread". Sarà il ciclo for all'interno del circuito hardware a iterare
-   // per 'n' elementi.
-   size_t global_work_size = 1;
-   size_t local_work_size = 1;
+   OCL_CHECK(ret, clEnqueueTask(queue_, kernel_, 0, NULL, NULL), return);
+
+   // Attende il completamento di tutti i comandi in coda (kernel e migrazione
+   // dati).
    OCL_CHECK(ret,
-             clEnqueueNDRangeKernel(queue_, kernel_, 1, NULL, &global_work_size,
-                                    &local_work_size, 0, NULL, NULL),
+             clEnqueueMigrateMemObjects(
+                queue_, 1, &bufferC, CL_MIGRATE_MEM_OBJECT_HOST, 0, NULL, NULL),
              return);
 
-   // Trasferimento dei risultati dalla memoria device alla memoria host.
-   OCL_CHECK(ret,
-             clEnqueueReadBuffer(queue_, bufferC, CL_TRUE, 0,
-                                 required_size_bytes, task->c, 0, NULL, NULL),
-             return);
-
-   // Sincronizzazione.
+   // Sincronizzazione
    OCL_CHECK(ret, clFinish(queue_), return);
+
+   // Mappatura del buffer di output per leggere i risultati.
+   int *ptrC =
+      (int *)clEnqueueMapBuffer(queue_, bufferC, CL_TRUE, CL_MAP_READ, 0,
+                                required_size_bytes, 0, NULL, NULL, &ret);
+   if (ret != CL_SUCCESS) {
+      std::cerr << "Error mapping bufferC\n";
+      return;
+   }
+
+   // Copia il risultato nel vettore di output del task.
+   std::memcpy(task->c, ptrC, required_size_bytes);
+
+   // Rilascio della mappatura dei buffer.
+   OCL_CHECK(ret, clEnqueueUnmapMemObject(queue_, bufferA, ptrA, 0, NULL, NULL),
+             return);
+   OCL_CHECK(ret, clEnqueueUnmapMemObject(queue_, bufferB, ptrB, 0, NULL, NULL),
+             return);
+   OCL_CHECK(ret, clEnqueueUnmapMemObject(queue_, bufferC, ptrC, 0, NULL, NULL),
+             return);
 
    // Fine misurazione tempo di esecuzione
    auto t1 = std::chrono::steady_clock::now();
