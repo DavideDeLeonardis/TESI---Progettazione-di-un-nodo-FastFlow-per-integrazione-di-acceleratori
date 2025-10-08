@@ -196,3 +196,24 @@ File che NON Andrebbero Modificati (La Prova della Buona Architettura)
    ff_node_acc_t.hpp e ff_node_acc_t.cpp: Il tuo "motore" asincrono a thread e code rimarrebbe identico. Non gli interessa quale calcolo venga eseguito; il suo compito è solo orchestrare il flusso di void* tra le code e delegare il lavoro all'acceleratore.
    La funzione main() in main.cpp: La logica di creazione della pipeline, la misurazione dei tempi e il meccanismo di verifica con promise/future rimarrebbero esattamente gli stessi. L'unica riga da cambiare sarebbe quella che crea l'adapter specifico (es. accelerator = std::make_unique<MatrixMulGpuAccelerator>();).
 
+
+
+
+1. Tempo Elapsed (elapsed / NUM_TASKS = throughput -> costo medio per completare un singolo task all'interno di un'esecuzione continua)
+Questo è il tempo completo che la tua pipeline impiega per processare tutti i task, dall'inizio alla fine. È la metrica che misura le performance dell'intero sistema software.
+Cosa include:
+   Il tempo di gestione della pipeline FastFlow.
+   Il tempo che i Task e i Result passano nelle code (inQ_, outQ_).
+   Il tempo di creazione e distruzione degli oggetti Task e Result.
+   Il tempo di trasferimento dei dati dalla CPU all'acceleratore (per GPU e FPGA).
+   Il tempo di calcolo vero e proprio (computed_time).
+   Il tempo di trasferimento dei risultati dall'acceleratore alla CPU.
+
+2. Tempo Computed (Tempo di Calcolo Effettivo)
+Questo è il tempo speso esclusivamente dall'acceleratore per eseguire il calcolo. Misura la performance pura del "motore" di calcolo, isolandolo da tutto il resto dell'infrastruttura software.
+Cosa include (per GPU e FPGA):
+   Il tempo per copiare i dati dalla RAM del computer alla memoria della scheda (clEnqueueWriteBuffer).
+   Il tempo per eseguire il kernel sulla scheda (clEnqueueNDRangeKernel).
+   Il tempo per ricopiare i risultati dalla scheda alla RAM (clEnqueueReadBuffer).
+   Il tempo per sincronizzare e assicurarsi che tutte le operazioni siano finite (clFinish).
+
