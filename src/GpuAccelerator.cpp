@@ -79,7 +79,7 @@ bool GpuAccelerator::initialize() {
       return false;
    }
 
-   // Crea una coda di comandi.
+   // Crea la coda di comandi.
    queue_ = clCreateCommandQueue(context_, device_id, 0, &ret);
    if (!queue_ || ret != CL_SUCCESS) {
       std::cerr << "[ERROR] GpuAccelerator: Failed to create command queue.\n";
@@ -106,7 +106,7 @@ bool GpuAccelerator::initialize() {
       return false;
    }
 
-   // Compila il programma per il dispositivo target.
+   // Compila il programma
    ret = clBuildProgram(program_, 1, &device_id, NULL, NULL, NULL);
    if (ret != CL_SUCCESS) {
       std::cerr << "[ERROR] GpuAccelerator: Kernel compilation failed.\n";
@@ -116,7 +116,6 @@ bool GpuAccelerator::initialize() {
       std::vector<char> log(log_size);
       clGetProgramBuildInfo(program_, device_id, CL_PROGRAM_BUILD_LOG, log_size,
                             log.data(), NULL);
-      std::cerr << "--- KERNEL BUILD LOG ---\n" << log.data() << "\n";
       return false;
    }
 
@@ -127,7 +126,7 @@ bool GpuAccelerator::initialize() {
       return false;
    }
 
-   // Prepara il pool di buffer
+   // Inizializza il pool di buffer
    buffer_pool_.resize(POOL_SIZE);
    for (size_t i = 0; i < POOL_SIZE; ++i)
       free_buffer_indices_.push(i);
@@ -226,7 +225,7 @@ void GpuAccelerator::send_data_async(void *task_context) {
    if (allocated_size_bytes_ != required_size_bytes)
       reallocate_buffers(required_size_bytes);
 
-   // Scrive i due input sulla device memory.
+   // Scrivi i due input sulla device memory.
    OCL_CHECK(ret,
              clEnqueueWriteBuffer(queue_, current_buffers.bufferA, CL_FALSE, 0,
                                   required_size_bytes, task->a, 0, NULL, NULL),

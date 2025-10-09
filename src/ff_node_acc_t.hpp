@@ -11,52 +11,49 @@
 using namespace ff;
 
 /**
- * Incapsula un modello Producer-Consumer interno con due thread e due code per
- * disaccoppiare l'esecuzione dei task sull'acceleratore dal flusso principale
- * della pipeline FastFlow.
+ * @brief Nodo FastFlow che orchestra l'offloading su un acceleratore.
+ *
+ * Implementa una pipeline interna a 3 stadi (Upload, Execute, Download)
+ * per sovrapporre calcolo e trasferimenti dati
  */
 class ff_node_acc_t : public ff_node {
  public:
-   /**
-    * @param acc Puntatore univoco a un'implementazione dell'interfaccia
-    * IAccelerator (CPU, GPU, o FPGA).
-    * @param count_promise Una std::promise per comunicare in modo sicuro il
-    * conteggio finale dei task al thread main.
-    */
    explicit ff_node_acc_t(std::unique_ptr<IAccelerator> acc,
                           std::promise<size_t> &&count_promise);
    ~ff_node_acc_t() override;
 
    long long getComputeTime_ns() const;
 
+ protected:
    int svc_init() override;
    void *svc(void *t) override;
    void svc_end() override;
 
  private:
-   // Valore non nullo usato per segnalare la terminazione ai thread interni
-   // attraverso le code.
+   // Sentinella usata per segnalare la terminazione ai thread interni
    static void *const SENTINEL;
 
-   void producerLoop();
-   void consumerLoop();
+   // ---- Loops dei 3 stadi della pipeline interna
+   // Prende un task, un buffer e avvia il trasferimento dati asincrono.
+   void uploaderLoop();
+   // Prende un task con i dati pronti e avvia asincronamente il kernel.
+   void launcherLoop();
+   // Prende un task eseguito, attende/recupera i risultati e finalizza.
+   void downloaderLoop();
 
-   // Puntatore all'acceleratore concreto (CPU, GPU, FPGA).
-   // std::unique_ptr garantisce la gestione automatica della memoria.
    std::unique_ptr<IAccelerator> accelerator_;
 
-   // Code interne Single-Producer/Single-Consumer.
+   // Code interne Single-Producer/Single-Consumer per la pipeline
    using TaskQ = uSWSR_Ptr_Buffer;
-   using ResultQ = uSWSR_Ptr_Buffer;
    TaskQ *inQ_{nullptr};
-   ResultQ *outQ_{nullptr};
+   TaskQ *kernel_ready_queue_{nullptr}; // Coda per i task pronti all'esecuzione
+   TaskQ *readout_ready_queue_{nullptr}; // Coda per i task pronti al download
 
-   // Contatore per il tempo di calcolo totale e membri dedicati alla verifica
-   // finale del conteggio dei task.
+   // Contatori e promise per i risultati
    std::atomic<long long> computed_ns_{0};
    std::atomic<size_t> tasks_processed_{0};
    std::promise<size_t> count_promise_;
 
-   // Oggetti thread che eseguono producerLoop e consumerLoop.
-   std::thread prodTh_, consTh_;
+   // I 3 thread per gli stadi della pipeline interna
+   std::thread uploaderTh_, launcherTh_, downloaderTh_;
 };
