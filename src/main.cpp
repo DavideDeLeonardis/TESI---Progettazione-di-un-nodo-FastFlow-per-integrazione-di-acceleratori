@@ -123,7 +123,9 @@ int main(int argc, char *argv[]) {
    // Creazione del nodo accelerato con l'acceleratore scelto
    ff_node_acc_t accNode(std::move(accelerator), std::move(count_promise));
 
-   // Creazione della pipeline FF a 2 stadi (Emitter->accNode)
+   // Creazione della pipeline FF a 2 stadi, il cui secondo stadio incapsula una
+   // pipeline interna con 3 thread per i 3 stadi della pipeline di calcolo
+   // (upload, execute, download).
    ff::ff_Pipe<> pipe(false, &emitter, &accNode);
 
    std::cout << "[Main] Starting pipeline execution...\n";

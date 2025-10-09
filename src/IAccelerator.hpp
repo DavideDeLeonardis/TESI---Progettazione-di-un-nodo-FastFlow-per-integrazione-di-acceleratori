@@ -28,21 +28,22 @@ class IAccelerator {
    virtual void release_buffer_set(size_t index) = 0;
 
    /**
-    * @brief Stadio 1: Invia i dati di input dal host al device in modo
+    * @brief Stadio 1 - Upload: Invia i dati di input dal host al device in modo
     * asincrono.
     * @param task_context Puntatore a un oggetto Task.
     */
    virtual void send_data_async(void *task_context) = 0;
 
    /**
-    * @brief Stadio 2: Accoda l'esecuzione del kernel in modo asincrono.
+    * @brief Stadio 2 - Execute: Accoda l'esecuzione del kernel in modo
+    * asincrono.
     * @param task_context Puntatore a un oggetto Task.
     */
    virtual void execute_kernel_async(void *task_context) = 0;
 
    /**
-    * @brief Stadio 3: Attende il completamento del kernel e recupera i
-    * risultati dal device all'host.
+    * @brief Stadio 3 - Download: Attende il completamento del kernel e recupera
+    * i risultati dal device all'host.
     * @param task_context Puntatore a un oggetto Task.
     * @param computed_ns Tempo di calcolo.
     */
