@@ -19,9 +19,7 @@
 /**
  * @brief Costruttore della classe GpuAccelerator.
  */
-GpuAccelerator::GpuAccelerator() { 
-   std::cerr << "[GpuAccelerator] Created.\n"; 
-}
+GpuAccelerator::GpuAccelerator() { std::cerr << "[GpuAccelerator] Created.\n"; }
 
 /**
  * @brief Distruttore della classe GpuAccelerator.
@@ -65,7 +63,10 @@ bool GpuAccelerator::initialize() {
    OCL_CHECK(ret, clGetPlatformIDs(1, &platform_id, NULL), return false);
    OCL_CHECK(
       ret, clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_GPU, 1, &device_id, NULL),
-      exit(EXIT_FAILURE));
+      {
+         std::cerr << "[FATAL] GPU non found.\n\n";
+         exit(EXIT_FAILURE);
+      });
 
    // Crea un contesto OpenCL.
    context_ = clCreateContext(NULL, 1, &device_id, NULL, NULL, &ret);

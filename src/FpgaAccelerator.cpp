@@ -73,7 +73,10 @@ bool FpgaAccelerator::initialize() {
    OCL_CHECK(ret,
              clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_ACCELERATOR, 1,
                             &device_id, NULL),
-             exit(EXIT_FAILURE));
+             {
+                std::cerr << "[FATAL] FPGA Accelerator not found.\n\n";
+                exit(EXIT_FAILURE);
+             });
 
    // Creazione del contesto e della coda di comandi.
    context_ = clCreateContext(NULL, 1, &device_id, NULL, NULL, &ret);

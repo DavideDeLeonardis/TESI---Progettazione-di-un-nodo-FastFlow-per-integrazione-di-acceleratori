@@ -61,7 +61,7 @@ int ff_node_acc_t::svc_init() {
    prodTh_ = std::thread(&ff_node_acc_t::producerLoop, this);
    consTh_ = std::thread(&ff_node_acc_t::consumerLoop, this);
 
-   std::cerr << "[Accelerator Node] Internal threads started.\n";
+   std::cerr << "[Accelerator Node] Queues created and internal threads started.\n";
    return 0;
 }
 
