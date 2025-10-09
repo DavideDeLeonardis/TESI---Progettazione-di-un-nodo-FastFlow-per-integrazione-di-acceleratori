@@ -23,7 +23,7 @@
 GpuAccelerator::GpuAccelerator() { std::cerr << "[GpuAccelerator] Created.\n"; }
 
 /**
- * @brief Distruttore. Si occupa di rilasciare in ordine inverso tutte le
+ * @brief Il distruttore si occupa di rilasciare in ordine inverso tutte le
  risorse OpenCL allocate, ovvero i buffer, il kernel, il programma, la coda di
  comandi e il contesto.
  */

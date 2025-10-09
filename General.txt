@@ -21,6 +21,10 @@ L'account è deleonardis, la macchina è
 
 9/09 -> CALCOLO SEQUENZIALE
 
+==> pipeline FastFlow a 2 stadi, dove il secondo stadio è un nodo acceleratore custom che incapsula una micro-pipeline interna a 3 stadi per l'esecuzione asincrona su hardware specializzato.
+
+
+
 
 
 
