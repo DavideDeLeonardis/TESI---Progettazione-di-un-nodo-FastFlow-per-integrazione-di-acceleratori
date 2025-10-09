@@ -46,11 +46,6 @@ class Emitter : public ff::ff_node {
    void *svc(void *) override {
       if (tasks_sent < tasks_to_send) {
          tasks_sent++;
-
-         // Viene creato un NUOVO oggetto Task sulla heap per ogni invio.
-         // Essenziale in un ambiente multi-thread per garantire che ogni task
-         // abbia un ciclo di vita indipendente e per evitare race condition. Il
-         // nodo successivo sarà responsabile di deallocare questa memoria.
          return new Task{a_ptr_, b_ptr_, c_ptr_, n_};
       }
 
@@ -128,8 +123,7 @@ int main(int argc, char *argv[]) {
    // Creazione del nodo accelerato con l'acceleratore scelto
    ff_node_acc_t accNode(std::move(accelerator), std::move(count_promise));
 
-   // Composizione e avvio della pipeline a 2 stadi: Emitter produce i Task e
-   // accNode li processa e li conta.
+   // Creazione della pipeline FF a 2 stadi (Emitter->accNode)
    ff::ff_Pipe<> pipe(false, &emitter, &accNode);
 
    std::cout << "[Main] Starting pipeline execution...\n";
