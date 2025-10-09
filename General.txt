@@ -19,6 +19,11 @@ L'account è deleonardis, la macchina è
 
 
 
+9/09 -> CALCOLO SEQUENZIALE
+
+
+
+
 DONE!!!!!! ----- DEVO ANCORA RIUTILIZZARE I BUFFER di memoria sulla GPU/FPGA (su CPU sono riutilizzati):
    Spostare l'Allocazione: Spostare le chiamate clCreateBuffer dal metodo execute() al metodo initialize() degli adapter. I cl_mem (bufferA, bufferB, bufferC) diventerebbero membri privati delle classi GpuAccelerator e FpgaAccelerator.
    Semplificare execute: Il metodo execute() non dovrebbe più allocare e deallocare, ma solo orchestrare i trasferimenti di dati (Write, Read) e l'esecuzione del kernel, usando i buffer pre-allocati.
