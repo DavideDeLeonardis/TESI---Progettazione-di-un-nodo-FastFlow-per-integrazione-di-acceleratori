@@ -11,7 +11,6 @@
 
 /* ------------ Emitter ------------- */
 /**
- * @class Emitter
  * @brief Nodo sorgente della pipeline FastFlow.
  *
  * Emitter genera i Task da processare.
@@ -26,10 +25,9 @@ class Emitter : public ff::ff_node {
     */
    explicit Emitter(size_t n, size_t num_tasks)
        : tasks_to_send(num_tasks), tasks_sent(0) {
-      // I vettori di dati vengono allocati e inizializzati una sola volta
       a.resize(n);
       b.resize(n);
-      c.resize(n); // Il vettore 'c' viene passato come buffer di output.
+      c.resize(n);
       for (size_t i = 0; i < n; ++i) {
          a[i] = int(i);
          b[i] = int(2 * i);
@@ -52,21 +50,20 @@ class Emitter : public ff::ff_node {
          // Viene creato un NUOVO oggetto Task sulla heap per ogni invio.
          // Essenziale in un ambiente multi-thread per garantire che ogni task
          // abbia un ciclo di vita indipendente e per evitare race condition. Il
-         // nodo successivo sarà responsabile di deallocare questa memoria con
-         // 'delete'.
+         // nodo successivo sarà responsabile di deallocare questa memoria.
          return new Task{a_ptr_, b_ptr_, c_ptr_, n_};
       }
 
-      // Una volta inviati tutti i task, invia il segnale di fine stream (EOS).
+      // Una volta inviati tutti i task segnala il fine stream.
       return FF_EOS;
    }
 
  private:
-   size_t tasks_to_send;
-   size_t tasks_sent;
-   int *a_ptr_, *b_ptr_, *c_ptr_;
-   size_t n_;                // Dimensione dei vettori
-   std::vector<int> a, b, c; // I vettori che possiedono i dati.
+   size_t tasks_to_send;          // Numero totale di task da inviare
+   size_t tasks_sent;             // Numero di task già inviati
+   int *a_ptr_, *b_ptr_, *c_ptr_; // Puntatori ai dati
+   size_t n_;                     // Dimensione dei vettori
+   std::vector<int> a, b, c;      // I vettori che possiedono i dati.
 };
 
 // Helper per stampare le istruzioni d'uso
@@ -124,15 +121,15 @@ int main(int argc, char *argv[]) {
       return -1;
    }
 
+   // Dati per ottenere il conteggio finale dei task processati
    std::promise<size_t> count_promise;
    std::future<size_t> count_future = count_promise.get_future();
 
    // Creazione del nodo accelerato con l'acceleratore scelto
    ff_node_acc_t accNode(std::move(accelerator), std::move(count_promise));
 
-   // Composizione e avvio della pipeline
-   // La pipeline è composta da 2 stadi: l'Emitter che produce i Task e
-   // l'accNode che li processa e li conta.
+   // Composizione e avvio della pipeline a 2 stadi: Emitter produce i Task e
+   // accNode li processa e li conta.
    ff::ff_Pipe<> pipe(false, &emitter, &accNode);
 
    std::cout << "[Main] Starting pipeline execution...\n";

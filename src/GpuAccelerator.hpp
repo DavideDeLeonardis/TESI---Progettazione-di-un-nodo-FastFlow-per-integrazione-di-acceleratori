@@ -19,16 +19,16 @@ class GpuAccelerator : public IAccelerator {
 
  private:
    // Risorse OpenCL
-   cl_context context_{nullptr};
-   cl_command_queue queue_{nullptr};
-   cl_program program_{nullptr}; // Il programma OpenCL (sorgente compilato)
-   cl_kernel kernel_{nullptr};
+   cl_context context_{nullptr};     // Il contesto OpenCL
+   cl_command_queue queue_{nullptr}; // La coda dei comandi OpenCL
+   cl_program program_{nullptr};     // Il programma OpenCL (sorgente compilato)
+   cl_kernel kernel_{nullptr};       // Il kernel OpenCL (funzione da eseguire)
 
    // Buffer persistenti sulla memoria del device
    cl_mem bufferA{nullptr};
    cl_mem bufferB{nullptr};
    cl_mem bufferC{nullptr};
 
-   // Dimensione in byte dei buffer attualmente allocati
+   // Dimensione dei buffer attualmente allocati
    size_t allocated_size_bytes_{0};
 };

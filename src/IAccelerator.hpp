@@ -2,7 +2,7 @@
 
 #include "../include/types.hpp"
 
-// Interfaccia astratta per un acceleratore hardware (CPU, GPU, FPGA)
+// Interfaccia per un acceleratore hardware (CPU, GPU, FPGA)
 class IAccelerator {
  public:
    virtual ~IAccelerator() = default;
@@ -14,7 +14,6 @@ class IAccelerator {
    // Esegue un singolo task di calcolo sull'acceleratore.
    virtual void execute(void *generic_task, long long &computed_ns) = 0;
 
-   // Non abbiamo bisogno di un metodo 'cleanup()' esplicito perché
-   // sfrutteremo il distruttore delle classi concrete (GpuAccelerator, etc.)
-   // per rilasciare le risorse.
+   // Non abbiamo bisogno di un metodo 'cleanup()' perché sfrutteremo il
+   // distruttore delle classi concrete per rilasciare le risorse.
 };
