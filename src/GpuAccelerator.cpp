@@ -5,6 +5,11 @@
 #include <thread>
 #include <vector>
 
+/**
+ * @file GpuAccelerator.cpp
+ * @brief Implementazione della classe GpuAccelerator per l'offloading su GPU.
+ */
+
 // Macro per il controllo degli errori OpenCL
 #define OCL_CHECK(err_code, call, on_error_action)                             \
    do {                                                                        \
@@ -216,8 +221,8 @@ void GpuAccelerator::send_data_async(void *task_context) {
    auto *task = static_cast<Task *>(task_context);
    BufferSet &current_buffers = buffer_pool_[task->buffer_idx];
 
-   std::cerr << "[GpuAccelerator - START] Processing task with N=" << task->n
-             << "...\n";
+   std::cerr << "[GpuAccelerator - START] Processing task " << task->id
+             << " with N=" << task->n << "...\n";
 
    // Se la dimensione richiesta è diversa da quella allocata, rialloca
    // tutti i buffer del pool.
@@ -306,5 +311,5 @@ void GpuAccelerator::get_results_blocking(void *task_context,
    computed_ns =
       std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
 
-   std::cerr << "[GpuAccelerator - END] Task finished.\n";
+   std::cerr << "[GpuAccelerator - END] Task " << task->id << " finished.\n";
 }

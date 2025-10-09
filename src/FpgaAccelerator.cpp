@@ -5,6 +5,11 @@
 #include <thread>
 #include <vector>
 
+/**
+ * @file FpgaAccelerator.cpp
+ * @brief Implementazione della classe FpgaAccelerator per l'offloading su FPGA.
+ */
+
 // Macro per il controllo degli errori OpenCL
 #define OCL_CHECK(err_code, call, on_error_action)                             \
    do {                                                                        \
@@ -208,8 +213,8 @@ void FpgaAccelerator::send_data_async(void *task_context) {
    auto *task = static_cast<Task *>(task_context);
    BufferSet &current_buffers = buffer_pool_[task->buffer_idx];
 
-   std::cerr << "[FpgaAccelerator - START] Processing task with N=" << task->n
-             << "...\n";
+   std::cerr << "[FpgaAccelerator - START] Processing task " << task->id
+             << " with N=" << task->n << "...\n";
 
    // Se la dimensione richiesta è diversa da quella allocata, rialloca
    // tutti i buffer del pool.
@@ -283,5 +288,5 @@ void FpgaAccelerator::get_results_blocking(void *task_context,
    computed_ns =
       std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
 
-   std::cerr << "[FpgaAccelerator - END] Task finished.\n";
+   std::cerr << "[FpgaAccelerator - END] Task " << task->id << " finished.\n";
 }

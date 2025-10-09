@@ -46,7 +46,7 @@ class Emitter : public ff::ff_node {
    void *svc(void *) override {
       if (tasks_sent < tasks_to_send) {
          tasks_sent++;
-         return new Task{a_ptr_, b_ptr_, c_ptr_, n_};
+         return new Task{a_ptr_, b_ptr_, c_ptr_, n_, tasks_sent};
       }
 
       // Una volta inviati tutti i task segnala il fine stream.
