@@ -37,11 +37,18 @@ Punti chiave da ricordare:
 
 
 // BUILD AND EXEC:
-rm -rf build; cmake -B build && cmake --build build && ./build/tesi-exec 1000000 2 gpu
+   rm -rf build; cmake -B build && cmake --build build && ./build/tesi-exec 1000000 2 gpu
 
-
-Per VM - FF version:
+// Install correct FF Version on VM:
    rm -rf external/fastflow; git clone https://github.com/fastflow/fastflow.git external/fastflow
+
+// SYNC Mac with VM
+   rsync -av --exclude 'build/' --exclude '.DS_Store'  /Users/davidedeleonardis/Desktop/Tesi/ deleonardis@131.114.3.250:~/Tesi/
+
+// COMPILAZIONE E LINKING SU FPGA per ottenere xclbin (in Tesi)
+v++ -c -k krnl_vadd --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw -o kernel/krnl_vadd.xo kernel/krnl_vadd.cpp
+v++ -l --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw -o krnl_vadd.xclbin kernel/krnl_vadd.xo
+
 
 
 
@@ -84,13 +91,6 @@ Questo dimostra in modo conclusivo che l'offloading su acceleratori ha senso sol
 
 
 
-
-
-
-
-// COMPILAZIONE E LINKING SU FPGA per ottenere xclbin (in Tesi)
-v++ -c -k krnl_vadd --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw -o kernel/krnl_vadd.xo kernel/krnl_vadd.cpp
-v++ -l --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw -o krnl_vadd.xclbin kernel/krnl_vadd.xo
 
 
 
