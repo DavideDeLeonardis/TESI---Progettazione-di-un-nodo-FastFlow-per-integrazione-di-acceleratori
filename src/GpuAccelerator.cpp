@@ -148,7 +148,7 @@ bool GpuAccelerator::initialize() {
 bool GpuAccelerator::reallocate_buffers(size_t required_size_bytes) {
    std::cerr << "  [GpuAccelerator - DEBUG] Buffer size mismatch or first run. "
              << "Allocating pool buffers for " << required_size_bytes
-             << " bytes...\n";
+             << " bytes\n";
 
    // Rilascia eventuali buffer esistenti
    for (auto &buffer_set : buffer_pool_) {

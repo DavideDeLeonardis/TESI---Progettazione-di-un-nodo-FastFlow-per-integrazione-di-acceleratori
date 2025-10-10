@@ -140,7 +140,7 @@ bool FpgaAccelerator::initialize() {
 bool FpgaAccelerator::reallocate_buffers(size_t required_size_bytes) {
    std::cerr
       << "  [FpgaAccelerator - DEBUG] Buffer size mismatch or first run. "
-      << "Allocating pool buffers for " << required_size_bytes << " bytes...\n";
+      << "Allocating pool buffers for " << required_size_bytes << " bytes.\n";
 
    // Rilascia eventuali buffer esistenti
    for (auto &buffer_set : buffer_pool_) {
