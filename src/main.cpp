@@ -67,20 +67,19 @@ void print_usage(const char *prog_name) {
              << "  N          : Size of the vectors (default: 1,000,000)\n"
              << "  NUM_TASKS  : Number of tasks to run (default: 50)\n"
              << "  DEVICE     : 'cpu', 'gpu', or 'fpga' (default: 'cpu')\n"
-             << "\nExample: " << prog_name << " 16777216 100 fpga\n";
+             << "\nExample: " << prog_name << " 16777216 100 gpu\n";
 }
 
 int main(int argc, char *argv[]) {
    // ------ Parsing degli argomenti della riga di comando ------
+   size_t N = 1000000, NUM_TASKS = 50;
+   std::string device_type = "cpu";
+
    if (argc > 1 &&
        (std::string(argv[1]) == "-h" || std::string(argv[1]) == "--help")) {
       print_usage(argv[0]);
       return 0;
    }
-
-   size_t N = 1000000;
-   size_t NUM_TASKS = 50;
-   std::string device_type = "cpu";
 
    try {
       if (argc > 1)
