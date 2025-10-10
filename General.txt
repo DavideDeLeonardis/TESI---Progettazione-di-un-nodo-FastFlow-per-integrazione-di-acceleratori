@@ -164,8 +164,6 @@ I tuoi log mostrano che anche l'FPGA ha un costo di inizializzazione significati
 
 
 
-
-
 Se volessi sostituire la somma vettoriale con un altro kernel, per esempio una moltiplicazione tra matrici, non dovresti toccare l'infrastruttura principale del progetto (ff_node_acc_t, la logica della pipeline, etc.). Le modifiche sarebbero mirate e contenute solo nelle parti specifiche del task.
 
 File da Modificare
@@ -208,7 +206,9 @@ File che NON Andrebbero Modificati (La Prova della Buona Architettura)
 
 
 
-1. Tempo Elapsed (elapsed / NUM_TASKS = throughput -> costo medio per completare un singolo task all'interno di un'esecuzione continua)
+
+
+1. Tempo Elapsed (È il "tempo reale" di completamento di un task.)
 Questo è il tempo completo che la tua pipeline impiega per processare tutti i task, dall'inizio alla fine. È la metrica che misura le performance dell'intero sistema software.
 Cosa include:
    Il tempo di gestione della pipeline FastFlow.
@@ -218,7 +218,7 @@ Cosa include:
    Il tempo di calcolo vero e proprio (computed_time).
    Il tempo di trasferimento dei risultati dall'acceleratore alla CPU.
 
-2. Tempo Computed (Tempo di Calcolo Effettivo)
+2. Tempo Computed (Tempo di Calcolo Effettivo della somma vettoriale)
 Questo è il tempo speso esclusivamente dall'acceleratore per eseguire il calcolo. Misura la performance pura del "motore" di calcolo, isolandolo da tutto il resto dell'infrastruttura software.
 Cosa include (per GPU e FPGA):
    Il tempo per copiare i dati dalla RAM del computer alla memoria della scheda (clEnqueueWriteBuffer).
@@ -227,9 +227,31 @@ Cosa include (per GPU e FPGA):
    Il tempo per sincronizzare e assicurarsi che tutte le operazioni siano finite (clFinish).
 
 
+Quando uso la GPU o l'FPGA, l'overhead è generato quasi interamente da due fattori:
+Trasferimento Dati (la causa maggiore): È il tempo necessario per spostare i vettori di input dalla RAM del computer alla memoria dell'acceleratore (GPU/FPGA) e per poi copiare il risultato indietro. 
+Questo viaggio, che avviene sul bus PCIe, è spesso il principale collo di bottiglia.
+
+Gestione e Sincronizzazione: Include il tempo che la CPU impiega per inviare i comandi, il tempo che il driver del dispositivo impiega per 
+schedulare il kernel e il tempo speso in attesa che l'operazione sia completata.
+
+   Overhead = Tempo "Elapsed" - Tempo "Computed"
+   Prendiamo uno dei tuoi test sulla GPU (Mac M2 Pro, N=1,000,000):
+   Avg elapsed: 1.83 ms
+   Avg computed: 0.94 ms
+   Calcolo dell'overhead:
+   1.83 ms - 0.94 ms = 0.89 ms
+   Questo significa che per ogni task, il tuo sistema impiega 0.89 ms solo per spostare i dati e gestire l'operazione. 
+   Il calcolo vero e proprio, invece, dura 0.94 ms. In questo caso, il costo di gestione è quasi pari al tempo di lavoro utile.
+
+
+
+
+
 
 
 LIMIT for N in VM: 7449999
+
+
 
 
 
