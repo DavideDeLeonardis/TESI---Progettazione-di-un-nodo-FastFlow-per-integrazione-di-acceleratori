@@ -25,6 +25,10 @@ class ff_node_acc_t : public ff_node {
                           std::promise<size_t> &&count_promise);
    ~ff_node_acc_t() override;
 
+   /**
+    * @brief Restituisce il tempo totale di calcolo effettivo (senza overhead
+    * di trasferimento dati) in nanosecondi.
+    */
    long long getComputeTime_ns() const;
 
  protected:
@@ -34,7 +38,7 @@ class ff_node_acc_t : public ff_node {
 
  private:
    // Sentinella usata per segnalare la fine dello stream di dati nelle code
-   // interne ai thread
+   // interne ai thread.
    static void *const SENTINEL;
 
    // ---- Loops dei 3 stadi della pipeline interna
@@ -47,19 +51,20 @@ class ff_node_acc_t : public ff_node {
 
    std::unique_ptr<IAccelerator> accelerator_;
 
-   // Code interne Single-Producer/Single-Consumer per la pipeline
+   // Code interne Single-Producer/Single-Consumer per la pipeline.
    using TaskQ = uSWSR_Ptr_Buffer;
-   TaskQ *inQ_{nullptr}; // Coda per ricevere i dati dalla pipeline FF
-   // Coda per i task pronti all'esecuzione del kernel
+   // Coda per ricevere i dati dalla pipeline FF esterna.
+   TaskQ *inQ_{nullptr};
+   // Coda per i task pronti all'esecuzione del kernel.
    TaskQ *kernel_ready_queue_{nullptr};
-   // Coda per i task pronti per la lettura dal device all'host
+   // Coda per i task pronti per la lettura dal device all'host.
    TaskQ *readout_ready_queue_{nullptr};
 
-   // Contatori e promise per i risultati
+   // Contatori e promise per i risultati.
    std::atomic<long long> computed_ns_{0};
    std::atomic<size_t> tasks_processed_{0};
    std::promise<size_t> count_promise_;
 
-   // I 3 thread per gli stadi della pipeline interna
+   // I 3 thread per gli stadi della pipeline interna.
    std::thread uploaderTh_, launcherTh_, downloaderTh_;
 };

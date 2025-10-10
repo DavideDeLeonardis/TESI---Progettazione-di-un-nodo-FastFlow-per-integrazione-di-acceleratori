@@ -5,36 +5,32 @@
 
 /**
  * @brief La computazione usando solo la CPU non è parallelizzata, in quanto
- * l'host e il device sono la stessa entità. È solo una simulazione
- * dell'interfaccia a pipeline.
+ * l'host e il device sono la stessa entità. È solo una SIMULAZIONE di una
+ * pipeline.
  */
 
-CpuAccelerator::CpuAccelerator() { std::cerr << "[CpuAccelerator] Created.\n"; }
+CpuAccelerator::CpuAccelerator() {}
 
 CpuAccelerator::~CpuAccelerator() {
    std::cerr << "[CpuAccelerator] Destroyed.\n";
 }
 
 bool CpuAccelerator::initialize() {
-   std::cerr << "[CpuAccelerator] Initialization successful.\n";
+   std::cerr
+      << "[CpuAccelerator] Initialization successful. Simulating pipeline...\n";
    return true;
 }
 
-size_t CpuAccelerator::acquire_buffer_set() {
-   // La CPU non ha buffer sul device
-   return 0;
+size_t CpuAccelerator::acquire_buffer_set() { return 0; }
+
+void CpuAccelerator::release_buffer_set(size_t) {}
+
+void CpuAccelerator::send_data_async(void *) {
+   // I dati sono già nella RAM accessibile alla CPU.
 }
 
-void CpuAccelerator::release_buffer_set(size_t /*index*/) {
-   // La CPU non ha buffer da rilasciare
-}
-
-void CpuAccelerator::send_data_async(void * /*task_context*/) {
-   // I dati sono già nella RAM accessibile alla CPU
-}
-
-void CpuAccelerator::execute_kernel_async(void * /*task_context*/) {
-   // L'esecuzione avverrà in modo sincrono nel passo successivo
+void CpuAccelerator::execute_kernel_async(void *) {
+   // L'esecuzione avverrà in modo sincrono nel passo successivo.
 }
 
 /**
@@ -48,11 +44,9 @@ void CpuAccelerator::get_results_blocking(void *task_context,
 
    auto t0 = std::chrono::steady_clock::now();
 
-   // Esegue la somma vettoriale. Questa funzione è ottimizzata e può sfruttare
-   // le istruzioni SIMD della CPU.
-   std::transform(task->a,
-                  task->a + task->n, // Fine del primo vettore di input
-                  task->b, task->c, [](int x, int y) { return x + y; });
+   // Esegue la somma vettoriale, possibilmente sfruttando le istruzioni SIMD.
+   std::transform(task->a, task->a + task->n, task->b, task->c,
+                  [](int x, int y) { return x + y; });
 
    // Calcola il tempo impiegato
    auto t1 = std::chrono::steady_clock::now();

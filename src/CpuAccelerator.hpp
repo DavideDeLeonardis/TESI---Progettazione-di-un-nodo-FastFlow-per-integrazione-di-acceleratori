@@ -5,12 +5,13 @@
 /**
  * @brief Implementazione dell'acceleratore per la CPU.
  *
- * La computazione usando solo la CPU non è parallelizzata, ma sequenziale, in
+ * La computazione usando solo la CPU non è parallelizzata, ma SEQUENZIALE, in
  * quanto l'host e il device sono la stessa entità. La funzione
  * get_results_blocking qui non delega nulla, ma esegue lei stessa l'intero
  * calcolo. Il downloaderLoop è l'unico che lavora e si blocca, deve finire
  * completamente il Task N prima di prendere in carico il Task N+1.
- * CpuAccelerator è solo una simulazione dell'interfaccia a pipeline.
+ *
+ * CpuAccelerator è solo una SIMULAZIONE di una pipeline.
  */
 class CpuAccelerator : public IAccelerator {
  public:

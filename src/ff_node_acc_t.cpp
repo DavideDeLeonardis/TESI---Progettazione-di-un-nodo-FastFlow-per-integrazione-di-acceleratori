@@ -6,8 +6,8 @@
 /**
  * @brief Implementazione del nodo FastFlow che orchestra l'offloading.
  *
- * Questo nodo incapsula una micro-pipeline interna a 3 stadi, gestita da tre
- * thread concorrenti:
+ * Questo nodo incapsula una pipeline interna a 3 stadi, gestita da tre thread
+ * concorrenti:
  * 1. Uploader: Trasferimento dati asincrono Host -> Device.
  * 2. Launcher: Esecuzione asincrona del kernel sul Device.
  * 3. Downloader: Trasferimento dati sincrono Device -> Host e
@@ -19,7 +19,7 @@
  */
 
 // Sentinella usata per segnalare la fine dello stream di dati nelle code
-// interne ai thread
+// interne ai thread.
 static char sentinel_obj;
 void *const ff_node_acc_t::SENTINEL = &sentinel_obj;
 
@@ -77,19 +77,20 @@ int ff_node_acc_t::svc_init() {
 }
 
 /**
- * @brief Metodo principale del nodo, chiamato da FF per ogni
- * task. Riceve un task e lo inserisce nella prima coda (inQ_).
+ * @brief Metodo principale del nodo, chiamato da FF per ogni task. Riceve un
+ * task e lo inserisce nella prima coda (inQ_).
  * @param task Puntatore al task in arrivo.
  * @return FF_GO_ON -> il nodo è pronto a ricevere altri task.
  */
 void *ff_node_acc_t::svc(void *task) {
+   // Se il task è un EOS, propaga la sentinella alla pipeline interna.
    if (task == FF_EOS) {
-      // Lo stream di input principale è terminato.
       inQ_->push(SENTINEL);
       return FF_GO_ON;
    }
 
-   // Inserisce il task nella coda di ingresso aspettando attivamente se è piena
+   // Inserisce il task nella coda di ingresso aspettando attivamente se è
+   // piena.
    while (!inQ_->push(task))
       std::this_thread::yield();
 
@@ -103,18 +104,17 @@ void *ff_node_acc_t::svc(void *task) {
 void ff_node_acc_t::uploaderLoop() {
    void *ptr = nullptr;
    while (true) {
-      // Estrae un task dalla coda di ingresso
+      // Estrae un task dalla coda di ingresso.
       while (!inQ_->pop(&ptr))
          std::this_thread::yield();
 
       if (ptr == SENTINEL) {
-         // Propaga il segnale di terminazione allo stadio successivo
+         // Propaga il segnale di terminazione allo stadio successivo.
          kernel_ready_queue_->push(SENTINEL);
          break;
       }
 
-      // Acquisisce un set di buffer libero dall'acceleratore e prepara il task
-      // per l'offloading
+      // Acquisisce un set di buffer libero dal device e gli invia i dati.
       auto *task = static_cast<Task *>(ptr);
       task->buffer_idx = accelerator_->acquire_buffer_set();
       accelerator_->send_data_async(task);
@@ -132,21 +132,21 @@ void ff_node_acc_t::uploaderLoop() {
 void ff_node_acc_t::launcherLoop() {
    void *ptr = nullptr;
    while (true) {
-      // Estrae un task che ha completato il trasferimento dati
+      // Estrae un task che ha completato il trasferimento dati.
       while (!kernel_ready_queue_->pop(&ptr))
          std::this_thread::yield();
 
       if (ptr == SENTINEL) {
-         // Propaga il segnale di terminazione
+         // Propaga il segnale di terminazione.
          readout_ready_queue_->push(SENTINEL);
          break;
       }
 
-      // Avvia l'esecuzione del kernel
+      // Avvia l'esecuzione del kernel.
       auto *task = static_cast<Task *>(ptr);
       accelerator_->execute_kernel_async(task);
 
-      // Inoltra il task al terzo stadio
+      // Inoltra il task al terzo stadio.
       while (!readout_ready_queue_->push(task))
          std::this_thread::yield();
    }
@@ -159,7 +159,7 @@ void ff_node_acc_t::launcherLoop() {
 void ff_node_acc_t::downloaderLoop() {
    void *ptr = nullptr;
    while (true) {
-      // Estrae un task
+      // Estrae un task.
       while (!readout_ready_queue_->pop(&ptr))
          std::this_thread::yield();
 
@@ -177,7 +177,7 @@ void ff_node_acc_t::downloaderLoop() {
       // operazione bloccante dell'intera pipeline interna.
       accelerator_->get_results_blocking(task, current_task_ns);
 
-      // Aggiorna le statistiche
+      // Aggiorna le statistiche.
       computed_ns_ += current_task_ns;
       tasks_processed_++;
 

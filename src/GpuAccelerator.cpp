@@ -6,11 +6,10 @@
 #include <vector>
 
 /**
- * @file GpuAccelerator.cpp
  * @brief Implementazione della classe GpuAccelerator per l'offloading su GPU.
  */
 
-// Macro per il controllo degli errori OpenCL
+// Macro per il controllo degli errori OpenCL.
 #define OCL_CHECK(err_code, call, on_error_action)                             \
    do {                                                                        \
       err_code = (call);                                                       \
@@ -22,10 +21,7 @@
       }                                                                        \
    } while (0)
 
-/**
- * @brief Costruttore.
- */
-GpuAccelerator::GpuAccelerator() { std::cerr << "[GpuAccelerator] Created.\n"; }
+GpuAccelerator::GpuAccelerator() {}
 
 /**
  * @brief Il distruttore si occupa di rilasciare in ordine inverso tutte le
@@ -33,7 +29,7 @@ GpuAccelerator::GpuAccelerator() { std::cerr << "[GpuAccelerator] Created.\n"; }
  comandi e il contesto.
  */
 GpuAccelerator::~GpuAccelerator() {
-   // Rilascia tutti i buffer di memoria nel pool
+   // Rilascia tutti i buffer di memoria nel pool.
    for (auto &buffer_set : buffer_pool_) {
       if (buffer_set.bufferA)
          clReleaseMemObject(buffer_set.bufferA);
@@ -43,7 +39,7 @@ GpuAccelerator::~GpuAccelerator() {
          clReleaseMemObject(buffer_set.bufferC);
    }
 
-   // Rilascia gli oggetti OpenCL
+   // Rilascia gli oggetti OpenCL.
    if (kernel_)
       clReleaseKernel(kernel_);
    if (program_)
@@ -91,7 +87,7 @@ bool GpuAccelerator::initialize() {
       return false;
    }
 
-   // Legge il file di sorgente del kernel
+   // Legge il kernel OpenCL.
    std::ifstream kernelFile("kernel/vecAdd.cl");
    if (!kernelFile.is_open()) {
       std::cerr
@@ -103,7 +99,7 @@ bool GpuAccelerator::initialize() {
    const char *source_str = kernelSource.c_str();
    size_t source_size = kernelSource.length();
 
-   // Crea e compila il programma OpenCL
+   // Crea il programma OpenCL.
    program_ =
       clCreateProgramWithSource(context_, 1, &source_str, &source_size, &ret);
    if (!program_ || ret != CL_SUCCESS) {
@@ -111,7 +107,7 @@ bool GpuAccelerator::initialize() {
       return false;
    }
 
-   // Compila il programma
+   // Compila il programma OpenCL.
    ret = clBuildProgram(program_, 1, &device_id, NULL, NULL, NULL);
    if (ret != CL_SUCCESS) {
       std::cerr << "[ERROR] GpuAccelerator: Kernel compilation failed.\n";
@@ -124,14 +120,14 @@ bool GpuAccelerator::initialize() {
       return false;
    }
 
-   // Estrai un handle al kernel compilato ("vecAdd").
+   // Crea l'oggetto kernel.
    kernel_ = clCreateKernel(program_, "vecAdd", &ret);
    if (!kernel_ || ret != CL_SUCCESS) {
       std::cerr << "[ERROR] GpuAccelerator: Failed to create kernel object.\n";
       return false;
    }
 
-   // Inizializza il pool di buffer
+   // Inizializza il pool di buffer.
    buffer_pool_.resize(POOL_SIZE);
    for (size_t i = 0; i < POOL_SIZE; ++i)
       free_buffer_indices_.push(i);
@@ -146,11 +142,10 @@ bool GpuAccelerator::initialize() {
  * dimensione di dati differente da quella corrente.
  */
 bool GpuAccelerator::reallocate_buffers(size_t required_size_bytes) {
-   std::cerr << "  [GpuAccelerator - DEBUG] Buffer size mismatch or first run. "
-             << "Allocating pool buffers for " << required_size_bytes
-             << " bytes\n";
+   std::cerr << "  [GpuAccelerator - DEBUG] Allocating pool buffers for "
+             << required_size_bytes << " bytes\n";
 
-   // Rilascia eventuali buffer esistenti
+   // Rilascia eventuali buffer esistenti.
    for (auto &buffer_set : buffer_pool_) {
       if (buffer_set.bufferA)
          clReleaseMemObject(buffer_set.bufferA);
@@ -160,7 +155,7 @@ bool GpuAccelerator::reallocate_buffers(size_t required_size_bytes) {
          clReleaseMemObject(buffer_set.bufferC);
    }
 
-   // Alloca nuovi buffer
+   // Alloca nuovi buffer.
    cl_int ret;
    for (size_t i = 0; i < POOL_SIZE; ++i) {
       buffer_pool_[i].bufferA = clCreateBuffer(context_, CL_MEM_READ_ONLY,
@@ -292,6 +287,7 @@ void GpuAccelerator::get_results_blocking(void *task_context,
    size_t required_size_bytes = sizeof(int) * task->n;
    BufferSet &current_buffers = buffer_pool_[task->buffer_idx];
    cl_event previous_event = task->event;
+   
    auto t0 = std::chrono::steady_clock::now();
 
    // Recupera i risultati dalla device memory alla memoria host.

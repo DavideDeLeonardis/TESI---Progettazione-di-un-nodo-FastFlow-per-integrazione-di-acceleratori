@@ -6,11 +6,10 @@
 #include <vector>
 
 /**
- * @file FpgaAccelerator.cpp
  * @brief Implementazione della classe FpgaAccelerator per l'offloading su FPGA.
  */
 
-// Macro per il controllo degli errori OpenCL
+// Macro per il controllo degli errori OpenCL.
 #define OCL_CHECK(err_code, call, on_error_action)                             \
    do {                                                                        \
       err_code = (call);                                                       \
@@ -22,12 +21,7 @@
       }                                                                        \
    } while (0)
 
-/**
- * @brief Costruttore.
- */
-FpgaAccelerator::FpgaAccelerator() {
-   std::cerr << "[FpgaAccelerator] Created.\n";
-}
+FpgaAccelerator::FpgaAccelerator() {}
 
 /**
  * @brief Il distruttore si occupa di rilasciare in ordine inverso tutte le
@@ -35,7 +29,7 @@ FpgaAccelerator::FpgaAccelerator() {
  comandi e il contesto.
  */
 FpgaAccelerator::~FpgaAccelerator() {
-   // Rilascia tutti i buffer di memoria nel pool
+   // Rilascia tutti i buffer di memoria nel pool.
    for (auto &buffer_set : buffer_pool_) {
       if (buffer_set.bufferA)
          clReleaseMemObject(buffer_set.bufferA);
@@ -45,7 +39,7 @@ FpgaAccelerator::~FpgaAccelerator() {
          clReleaseMemObject(buffer_set.bufferC);
    }
 
-   // Rilascia gli oggetti OpenCL
+   // Rilascia gli oggetti OpenCL.
    if (kernel_)
       clReleaseKernel(kernel_);
    if (program_)
@@ -103,7 +97,7 @@ bool FpgaAccelerator::initialize() {
    const unsigned char *binaries[] = {kernelBinary.data()};
    const size_t binary_sizes[] = {binarySize};
 
-   // Crea il programma con il binario xclbin caricato
+   // Crea il programma con il binario xclbin caricato.
    program_ = clCreateProgramWithBinary(context_, 1, &device_id, binary_sizes,
                                         binaries, NULL, &ret);
    if (!program_ || ret != CL_SUCCESS) {
@@ -116,14 +110,14 @@ bool FpgaAccelerator::initialize() {
    // compilato => l'inizializzazione dell'FPGA è molto più veloce di
    // quella della GPU.
 
-   // Crea il kernel
+   // Crea il kernel.
    kernel_ = clCreateKernel(program_, "krnl_vadd", &ret);
    if (!kernel_ || ret != CL_SUCCESS) {
       std::cerr << "[ERROR] FpgaAccelerator: Failed to create kernel.\n";
       return false;
    }
 
-   // Inizializza il pool di buffer
+   // Inizializza il pool di buffer.
    buffer_pool_.resize(POOL_SIZE);
    for (size_t i = 0; i < POOL_SIZE; ++i)
       free_buffer_indices_.push(i);
@@ -138,11 +132,10 @@ bool FpgaAccelerator::initialize() {
  * dimensione di dati differente da quella corrente.
  */
 bool FpgaAccelerator::reallocate_buffers(size_t required_size_bytes) {
-   std::cerr
-      << "  [FpgaAccelerator - DEBUG] Buffer size mismatch or first run. "
-      << "Allocating pool buffers for " << required_size_bytes << " bytes.\n";
+   std::cerr << "  [FpgaAccelerator - DEBUG] Allocating pool buffers for "
+             << required_size_bytes << " bytes.\n";
 
-   // Rilascia eventuali buffer esistenti
+   // Rilascia eventuali buffer esistenti.
    for (auto &buffer_set : buffer_pool_) {
       if (buffer_set.bufferA)
          clReleaseMemObject(buffer_set.bufferA);
@@ -152,7 +145,7 @@ bool FpgaAccelerator::reallocate_buffers(size_t required_size_bytes) {
          clReleaseMemObject(buffer_set.bufferC);
    }
 
-   // Alloca nuovi buffer
+   // Alloca nuovi buffer.
    cl_int ret;
    for (size_t i = 0; i < POOL_SIZE; ++i) {
       buffer_pool_[i].bufferA = clCreateBuffer(context_, CL_MEM_READ_ONLY,
@@ -179,14 +172,14 @@ bool FpgaAccelerator::reallocate_buffers(size_t required_size_bytes) {
 size_t FpgaAccelerator::acquire_buffer_set() {
    std::unique_lock<std::mutex> lock(pool_mutex_);
 
-   // Attende finché non c'è un buffer libero
+   // Attende finché non c'è un buffer libero.
    while (free_buffer_indices_.empty()) {
       lock.unlock();
       std::this_thread::yield();
       lock.lock();
    }
 
-   // Estrae e restituisce l'indice del buffer libero
+   // Estrae e restituisce l'indice del buffer libero.
    size_t index = free_buffer_indices_.front();
    free_buffer_indices_.pop();
    return index;
@@ -206,7 +199,6 @@ void FpgaAccelerator::release_buffer_set(size_t index) {
  * L'evento per la sincronizzazione (`task->event`) viene generato solo
  * dall'ultima operazione, garantendo che lo stadio successivo attenda il
  * completamento di entrambi i trasferimenti.
- *
  */
 void FpgaAccelerator::send_data_async(void *task_context) {
    cl_int ret; // Codice di ritorno delle chiamate OpenCL
@@ -269,6 +261,7 @@ void FpgaAccelerator::get_results_blocking(void *task_context,
    size_t required_size_bytes = sizeof(int) * task->n;
    BufferSet &current_buffers = buffer_pool_[task->buffer_idx];
    cl_event previous_event = task->event;
+
    auto t0 = std::chrono::steady_clock::now();
 
    // Recupera i risultati dalla device memory alla memoria host.
@@ -283,7 +276,7 @@ void FpgaAccelerator::get_results_blocking(void *task_context,
       clReleaseEvent(previous_event);
    task->event = nullptr;
 
-   // Calcola il tempo impiegato
+   // Calcola il tempo impiegato.
    auto t1 = std::chrono::steady_clock::now();
    computed_ns =
       std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
