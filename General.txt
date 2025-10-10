@@ -226,3 +226,7 @@ Cosa include (per GPU e FPGA):
    Il tempo per ricopiare i risultati dalla scheda alla RAM (clEnqueueReadBuffer).
    Il tempo per sincronizzare e assicurarsi che tutte le operazioni siano finite (clFinish).
 
+
+
+
+LIMIT for N in VM: 7449999
