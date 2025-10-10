@@ -3,88 +3,93 @@
 #include <iostream>
 #include <thread>
 
-// Con static SENTINEL ha un valore unico e non nullo
+/**
+ * @brief Implementazione del nodo FastFlow che orchestra l'offloading.
+ *
+ * Questo nodo incapsula una micro-pipeline interna a 3 stadi, gestita da tre
+ * thread concorrenti:
+ * 1. Uploader: Trasferimento dati asincrono Host -> Device.
+ * 2. Launcher: Esecuzione asincrona del kernel sul Device.
+ * 3. Downloader: Trasferimento dati sincrono Device -> Host e
+ * finalizzazione.
+ *
+ * Permette di sovrapporre le operazioni di I/O con il calcolo, nella pipeline
+ * il task `n` è in esecuzione, mentre i dati per `n+1` vengono caricati e i
+ * risultati di `n-1` vengono scaricati.
+ */
+
+// Sentinella usata per segnalare la fine dello stream di dati nelle code
+// interne ai thread
 static char sentinel_obj;
 void *const ff_node_acc_t::SENTINEL = &sentinel_obj;
 
 /**
- * @brief Costruttore del nodo con acceleratore hardware
- *
- * @param acc Puntatore ad un'implementazione dell'acceleratore.
- * @param count_promise Una std::promise per il conteggio finale dei task.
- *
+ * @brief Costruttore del nodo.
+
+ * @param acc Puntatore a un'implementazione di IAccelerator.
+ * @param count_promise Una promise per comunicare il conteggio finale.
  */
 ff_node_acc_t::ff_node_acc_t(std::unique_ptr<IAccelerator> acc,
                              std::promise<size_t> &&count_promise)
-    : accelerator_(std::move(acc)), computed_ns_(0), tasks_processed_(0),
-      count_promise_(std::move(count_promise)) {}
+    : accelerator_(std::move(acc)), count_promise_(std::move(count_promise)) {}
 
 /**
- * Il distruttore si occupa di deallocare la memoria delle code interne.
- * Viene chiamato solo dopo che la pipeline è terminata e i thread interni
- * sono stati chiusi in modo sicuro dal metodo svc_end().
+ * @brief Distruttore. Dealloca la memoria per le code interne.
  */
 ff_node_acc_t::~ff_node_acc_t() {
    delete inQ_;
-   delete outQ_;
+   delete kernel_ready_queue_;
+   delete readout_ready_queue_;
 }
 
-// Restituisce il tempo di calcolo totale in nanosecondi
+/**
+ * @brief Restituisce il tempo di calcolo totale accumulato in nanosecondi.
+ */
 long long ff_node_acc_t::getComputeTime_ns() const {
    return computed_ns_.load();
 }
 
 /**
- * @brief Metodo di inizializzazione del nodo
- *
- * Prepara l'intero nodo per l'esecuzione:
- * 1. Inizializza l'acceleratore hardware.
- * 2. Alloca e inizializza le due code interne.
- * 3. Crea e avvia i due thread interni (Producer e Consumer).
- * @return 0 in caso di successo, -1 in caso di errore.
+ * @brief Metodo di inizializzazione del nodo, chiamato da FF.
  */
 int ff_node_acc_t::svc_init() {
    std::cerr << "[Accelerator Node] Initializing...\n";
-   if (!accelerator_ || !accelerator_->initialize()) {
+   if (!accelerator_ || !accelerator_->initialize())
       return -1;
-   }
 
-   // Alloca e inizializza le code interne
+   // Alloca le code per la comunicazione tra gli stadi della pipeline interna
    inQ_ = new TaskQ(1024);
-   outQ_ = new ResultQ(1024);
-   if (!inQ_->init() || !outQ_->init()) {
+   kernel_ready_queue_ = new TaskQ(1024);
+   readout_ready_queue_ = new TaskQ(1024);
+   if (!inQ_->init() || !kernel_ready_queue_->init() ||
+       !readout_ready_queue_->init()) {
       std::cerr << "[ERROR] Accelerator Node: Queues initialization failed.\n";
       return -1;
    }
 
-   // Crea e avvia i thread interni
-   prodTh_ = std::thread(&ff_node_acc_t::producerLoop, this);
-   consTh_ = std::thread(&ff_node_acc_t::consumerLoop, this);
+   // Avvia i tre thread
+   uploaderTh_ = std::thread(&ff_node_acc_t::uploaderLoop, this);
+   launcherTh_ = std::thread(&ff_node_acc_t::launcherLoop, this);
+   downloaderTh_ = std::thread(&ff_node_acc_t::downloaderLoop, this);
 
-   std::cerr << "[Accelerator Node] Queues created and internal threads started.\n";
+   std::cerr << "[Accelerator Node] Internal 3-stage pipeline started.\n\n";
    return 0;
 }
 
 /**
- * @brief Metodo principale di input del nodo
- *
- * Riceve i Task dall'Emitter e li inserisce nella coda interna inQ_ per il
- * producerLoop. Non esegue calcoli, ma delega il lavoro, restituendo
- * immediatamente il controllo alla pipeline.
- * @param t Puntatore generico al Task o al segnale FF_EOS.
- * @return FF_GO_ON per continuare, o FF_EOS al termine.
+ * @brief Metodo principale del nodo, chiamato da FF per ogni
+ * task. Riceve un task e lo inserisce nella prima coda (inQ_).
+ * @param task Puntatore al task in arrivo.
+ * @return FF_GO_ON -> il nodo è pronto a ricevere altri task.
  */
-void *ff_node_acc_t::svc(void *t) {
-   if (t == FF_EOS) {
-      // Se lo stream di input è terminato, inoltra il segnale di terminazione
-      // (SENTINEL) ai thread interni.
-      if (inQ_)
-         inQ_->push(SENTINEL);
-      return FF_GO_ON; // La pipeline deve continuare finché i thread non
-                       // finiscono.
+void *ff_node_acc_t::svc(void *task) {
+   if (task == FF_EOS) {
+      // Lo stream di input principale è terminato.
+      inQ_->push(SENTINEL);
+      return FF_GO_ON;
    }
 
-   auto *task = static_cast<Task *>(t);
+   // Inserisce il task nella coda di ingresso aspettando attivamente se è piena
    while (!inQ_->push(task))
       std::this_thread::yield();
 
@@ -92,87 +97,111 @@ void *ff_node_acc_t::svc(void *t) {
 }
 
 /**
- * @brief Funzione eseguita dal thread "Producer".
- *
- * 1. Attende un Task sulla coda inQ_.
- * 2. Chiama l'acceleratore per eseguire il calcolo (operazione bloccante).
- * 3. Accumula il tempo di calcolo.
- * 4. Crea un oggetto Result e lo inserisce nella coda outQ_.
- * 5. Libera la memoria del Task che ha appena processato.
+ * @brief Loop per il 1° stadio della pipeline: Uploader.
+ * Consumer per inQ_ e producer per kernel_ready_queue_
  */
-void ff_node_acc_t::producerLoop() {
+void ff_node_acc_t::uploaderLoop() {
    void *ptr = nullptr;
-
    while (true) {
+      // Estrae un task dalla coda di ingresso
       while (!inQ_->pop(&ptr))
          std::this_thread::yield();
 
       if (ptr == SENTINEL) {
-         // Inoltra il segnale di terminazione al consumer e termina.
-         while (!outQ_->push(SENTINEL))
-            std::this_thread::yield();
+         // Propaga il segnale di terminazione allo stadio successivo
+         kernel_ready_queue_->push(SENTINEL);
          break;
       }
 
+      // Acquisisce un set di buffer libero dall'acceleratore e prepara il task
+      // per l'offloading
       auto *task = static_cast<Task *>(ptr);
-      long long current_task_ns = 0; // Tempo di calcolo per questo task
+      task->buffer_idx = accelerator_->acquire_buffer_set();
+      accelerator_->send_data_async(task);
 
-      // Esegue il calcolo sull'acceleratore e misura il tempo impiegato.
-      accelerator_->execute(task, current_task_ns);
-      computed_ns_ += current_task_ns;
-
-      auto *res = new Result{task->c, task->n};
-      delete task; // Il producer è responsabile di deallocare il Task.
-      while (!outQ_->push(res))
+      // Inoltra il task al secondo stadio
+      while (!kernel_ready_queue_->push(task))
          std::this_thread::yield();
    }
 }
 
 /**
- * @brief Funzione eseguita dal thread "Consumer".
- *
- * 1. Attende un Result sulla coda outQ_.
- * 2. Incrementa il contatore dei task processati.
- * 3. Libera la memoria dell'oggetto Result.
- * 4. Al termine (ricevendo SENTINEL), mantiene la promessa inviando il
- * conteggio finale al thread main.
+ * @brief Loop per il 2° stadio della pipeline: Launcher.
+ * Consumer per kernel_ready_queue_ e producer per readout_ready_queue_
  */
-void ff_node_acc_t::consumerLoop() {
+void ff_node_acc_t::launcherLoop() {
    void *ptr = nullptr;
-
    while (true) {
-      while (!outQ_->pop(&ptr))
+      // Estrae un task che ha completato il trasferimento dati
+      while (!kernel_ready_queue_->pop(&ptr))
          std::this_thread::yield();
 
       if (ptr == SENTINEL) {
-         // Flusso terminato: comunica il conteggio finale al main e termina.
+         // Propaga il segnale di terminazione
+         readout_ready_queue_->push(SENTINEL);
+         break;
+      }
+
+      // Avvia l'esecuzione del kernel
+      auto *task = static_cast<Task *>(ptr);
+      accelerator_->execute_kernel_async(task);
+
+      // Inoltra il task al terzo stadio
+      while (!readout_ready_queue_->push(task))
+         std::this_thread::yield();
+   }
+}
+
+/**
+ * @brief Loop del thread per il 3° stadio della pipeline: Downloader.
+ * Consumer per readout_ready_queue_.
+ */
+void ff_node_acc_t::downloaderLoop() {
+   void *ptr = nullptr;
+   while (true) {
+      // Estrae un task
+      while (!readout_ready_queue_->pop(&ptr))
+         std::this_thread::yield();
+
+      if (ptr == SENTINEL) {
+         // La pipeline è vuota e lo stream è terminato. Comunica il conteggio
+         // finale dei task processati al thread main tramite la promise.
          count_promise_.set_value(tasks_processed_.load());
          break;
       }
 
+      auto *task = static_cast<Task *>(ptr);
+      long long current_task_ns = 0;
+
+      // Attende il completamento del task e recupera i dati. È l'unica
+      // operazione bloccante dell'intera pipeline interna.
+      accelerator_->get_results_blocking(task, current_task_ns);
+
+      // Aggiorna le statistiche
+      computed_ns_ += current_task_ns;
       tasks_processed_++;
-      auto *res = static_cast<Result *>(ptr);
-      delete res; // Il consumer è responsabile di deallocare il Result.
+
+      // Rilascia il buffer e dealloca la memoria del task.
+      accelerator_->release_buffer_set(task->buffer_idx);
+      delete task;
    }
 }
 
 /**
- * @brief Metodo di terminazione
- *
- * Gestisce lo spegnimento pulito e sincronizzato dei thread interni.
- * Questo metodo è bloccante e non restituisce il controllo finché entrambi i
- * thread non sono terminati, forzando la pipeline ad attendere.
+ * @brief Metodo di terminazione, chiamato da FF.
  */
 void ff_node_acc_t::svc_end() {
-   // Invia un'ultima sentinella per garantire lo sblocco dei thread.
+   // Invia una sentinella "di sicurezza".
    if (inQ_)
       inQ_->push(SENTINEL);
 
-   // Attende la terminazione effettiva dei thread interni.
-   if (prodTh_.joinable())
-      prodTh_.join();
-   if (consTh_.joinable())
-      consTh_.join();
+   // Attende la terminazione di ogni thread.
+   if (uploaderTh_.joinable())
+      uploaderTh_.join();
+   if (launcherTh_.joinable())
+      launcherTh_.join();
+   if (downloaderTh_.joinable())
+      downloaderTh_.join();
 
    std::cerr << "\n[Accelerator Node] Shutdown complete.\n";
 }

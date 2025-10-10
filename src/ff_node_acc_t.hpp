@@ -12,7 +12,12 @@
  * @brief Nodo FastFlow che orchestra l'offloading su un acceleratore.
  *
  * Implementa una pipeline interna a 3 stadi (Upload, Execute, Download)
- * per sovrapporre calcolo e trasferimenti dati
+ * gestita da 3 thread dedicati per sovrapporre calcolo e trasferimenti dati:
+ * 1. Uploader: Prepara i dati e avvia il trasferimento asincrono verso il
+ * device.
+ * 2. Launcher: Avvia l'esecuzione asincrona del kernel sul device.
+ * 3. Downloader: Attende il completamento, recupera i risultati e
+ * finalizza il task.
  */
 class ff_node_acc_t : public ff_node {
  public:
@@ -28,7 +33,8 @@ class ff_node_acc_t : public ff_node {
    void svc_end() override;
 
  private:
-   // Sentinella usata per segnalare la terminazione ai thread interni
+   // Sentinella usata per segnalare la fine dello stream di dati nelle code
+   // interne ai thread
    static void *const SENTINEL;
 
    // ---- Loops dei 3 stadi della pipeline interna
@@ -43,9 +49,11 @@ class ff_node_acc_t : public ff_node {
 
    // Code interne Single-Producer/Single-Consumer per la pipeline
    using TaskQ = uSWSR_Ptr_Buffer;
-   TaskQ *inQ_{nullptr};
-   TaskQ *kernel_ready_queue_{nullptr}; // Coda per i task pronti all'esecuzione
-   TaskQ *readout_ready_queue_{nullptr}; // Coda per i task pronti al download
+   TaskQ *inQ_{nullptr}; // Coda per ricevere i dati dalla pipeline FF
+   // Coda per i task pronti all'esecuzione del kernel
+   TaskQ *kernel_ready_queue_{nullptr};
+   // Coda per i task pronti per la lettura dal device all'host
+   TaskQ *readout_ready_queue_{nullptr};
 
    // Contatori e promise per i risultati
    std::atomic<long long> computed_ns_{0};
