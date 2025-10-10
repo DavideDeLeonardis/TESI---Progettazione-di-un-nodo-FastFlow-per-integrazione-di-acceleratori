@@ -230,3 +230,11 @@ Cosa include (per GPU e FPGA):
 
 
 LIMIT for N in VM: 7449999
+
+
+
+La CPU fa il Manager: Quando il nostro uploaderLoop sulla CPU chiama send_data_async, non sta trasferendo i dati lui stesso. 
+Sta dando un ordine al gestore della memoria del device (un'unità hardware chiamata DMA) di iniziare il trasferimento. 
+Fatto questo, il thread della CPU è libero e può immediatamente iniziare a lavorare sul task successivo.
+
+Il Parallelismo Reale: Mentre la GPU sta eseguendo il calcolo per il Task N, la CPU è completamente libera e può usare quel tempo per preparare e inviare i dati per il Task N+1. 

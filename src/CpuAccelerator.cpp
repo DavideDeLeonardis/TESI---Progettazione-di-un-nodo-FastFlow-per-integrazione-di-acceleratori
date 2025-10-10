@@ -3,6 +3,12 @@
 #include <chrono>
 #include <iostream>
 
+/**
+ * @brief La computazione usando solo la CPU non è parallelizzata, in quanto
+ * l'host e il device sono la stessa entità. È solo una simulazione
+ * dell'interfaccia a pipeline.
+ */
+
 CpuAccelerator::CpuAccelerator() { std::cerr << "[CpuAccelerator] Created.\n"; }
 
 CpuAccelerator::~CpuAccelerator() {
