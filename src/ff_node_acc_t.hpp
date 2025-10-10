@@ -8,8 +8,6 @@
 #include <memory>
 #include <thread>
 
-using namespace ff;
-
 /**
  * @brief Nodo FastFlow che orchestra l'offloading su un acceleratore.
  *
