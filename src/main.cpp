@@ -93,6 +93,11 @@ int main(int argc, char *argv[]) {
       print_usage(argv[0]);
       return -1;
    }
+
+   if (N == 0) {
+      std::cerr << "[FATAL] La dimensione dei vettori (N) non può essere 0.\n";
+      return EXIT_FAILURE;
+   }
    // /----- Parsing degli argomenti della riga di comando ------
 
    std::cout << "\nConfiguration: N=" << N << ", NUM_TASKS=" << NUM_TASKS
