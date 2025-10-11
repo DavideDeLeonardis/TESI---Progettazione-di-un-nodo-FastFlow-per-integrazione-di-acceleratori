@@ -10,8 +10,8 @@
  * 2. Consumer (Downloader): Trasferisce i risultati dal device all'host.
  *
  * Permette di sovrapporre le operazioni di I/O con il calcolo, nella pipeline
- * il task `n` è in esecuzione, mentre i dati per `n+1` vengono caricati e i
- * risultati di `n-1` vengono scaricati.
+ * il task 'n' è in esecuzione, mentre i dati per 'n+1' vengono caricati e i
+ * risultati di 'n-1' vengono scaricati.
  */
 
 // Sentinella usata per segnalare la fine dello stream di dati alla pipeline
@@ -108,6 +108,7 @@ void ff_node_acc_t::producerLoop() {
  */
 void ff_node_acc_t::consumerLoop() {
    while (true) {
+      // Prende un task pronto dalla coda.
       void *ptr = readyQ_.pop();
 
       if (ptr == SENTINEL) {

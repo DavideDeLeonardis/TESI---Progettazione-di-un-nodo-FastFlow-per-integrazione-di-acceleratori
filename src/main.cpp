@@ -3,6 +3,7 @@
 #include "FpgaAccelerator.hpp"
 #include "GpuAccelerator.hpp"
 #include "ff_node_acc_t.hpp"
+#include "helpers/Helpers.hpp"
 #include <chrono>
 #include <future>
 #include <iostream>
@@ -25,7 +26,7 @@ class Emitter : public ff_node {
     */
    explicit Emitter(size_t n, size_t num_tasks)
        : tasks_to_send(num_tasks), tasks_sent(0) {
-      // Init dei vettori con i dati di input
+      // Init dei vettori con i dati di input.
       a.resize(n);
       b.resize(n);
       c.resize(n);
@@ -34,7 +35,7 @@ class Emitter : public ff_node {
          b[i] = int(2 * i);
       }
 
-      // Salvataggio dei ptr ai dati di input/output e della dim dei vettori
+      // Salvataggio dei ptr ai dati di input/output e della dim dei vettori.
       a_ptr_ = a.data();
       b_ptr_ = b.data();
       c_ptr_ = c.data();
@@ -63,13 +64,59 @@ class Emitter : public ff_node {
    size_t n_;                     // Dimensione dei vettori
 };
 
-// Helper per stampare le istruzioni d'uso
-void print_usage(const char *prog_name) {
-   std::cerr << "Usage: " << prog_name << " [N] [NUM_TASKS] [DEVICE]\n"
-             << "  N          : Size of the vectors (default: 1,000,000)\n"
-             << "  NUM_TASKS  : Number of tasks to run (default: 50)\n"
-             << "  DEVICE     : 'cpu', 'gpu', or 'fpga' (default: 'cpu')\n"
-             << "\nExample: " << prog_name << " 16777216 100 gpu\n";
+/**
+ * @brief Orchestra l'intera pipeline FastFlow per l'offloading su un
+ * acceleratore. Crea il nodo sorgente (Emitter) che genera i task. Seleziona,
+ * crea e inizializza l'oggetto acceleratore corretto. Imposta la pipeline
+ * FastFlow a 2 stadi (Emitter -> ff_node_acc_t). Avvia la pipeline, misura
+ * il tempo totale di esecuzione (elapsed). Raccoglie i risultati finali, come
+ * il tempo di calcolo puro (computed) e il numero di task completati.
+ */
+void runAcceleratorPipeline(size_t N, size_t NUM_TASKS,
+                            const std::string &device_type,
+                            long long &ns_elapsed, long long &ns_computed,
+                            size_t &final_count) {
+
+   // Creazione del nodo sorgente della pipeline FF.
+   Emitter emitter(N, NUM_TASKS);
+
+   // Selezione e creazione dell'acceleratore.
+   std::unique_ptr<IAccelerator> accelerator;
+   if (device_type == "fpga")
+      accelerator = std::make_unique<FpgaAccelerator>();
+   else if (device_type == "gpu")
+      accelerator = std::make_unique<GpuAccelerator>();
+
+   // Dati per ottenere il conteggio finale dei task processati.
+   StatsCollector stats;
+   std::future<size_t> count_future = stats.count_promise.get_future();
+
+   // Creazione del nodo di calcolo che usa l'acceleratore scelto.
+   ff_node_acc_t accNode(std::move(accelerator), &stats);
+
+   // Creazione della pipeline FF a 2 stadi, il cui secondo stadio incapsula
+   // una pipeline interna a 2 thread (producer, consumer).
+   ff_Pipe<> pipe(&emitter, &accNode);
+
+   std::cout << "[Main] Starting FF pipeline execution...\n";
+   auto t0 = std::chrono::steady_clock::now();
+
+   // Avvio della pipeline e attesa del completamento.
+   if (pipe.run_and_wait_end() < 0) {
+      std::cerr << "[ERROR] Main: Pipeline execution failed.\n";
+      ns_elapsed = 0;
+      ns_computed = 0;
+      final_count = 0;
+      return;
+   }
+   auto t1 = std::chrono::steady_clock::now();
+   std::cout << "[Main] FF Pipeline execution finished.\n";
+
+   // Raccolta dei risultati.
+   final_count = count_future.get();
+   ns_elapsed =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
+   ns_computed = stats.computed_ns.load();
 }
 
 int main(int argc, char *argv[]) {
@@ -109,80 +156,25 @@ int main(int argc, char *argv[]) {
    long long ns_computed = 0;
    size_t final_count = 0;
 
-   // In base al device scelto, esegue la parallelizzazione su CPU multicore o
-   // la pipeline con offloading su GPU/FPGA.
+   // In base al device scelto, esegue la parallelizzazione dei task su CPU
+   // multicore o la pipeline con offloading su GPU/FPGA.
    if (device_type == "cpu") {
-      // Esegue i task in parallelo su CPU.
       ns_elapsed = executeCpuParallelTasks(N, NUM_TASKS);
 
-      // Su CPU non c'è overhead di trasferimento quindi elapsed = computed.
+      // Su CPU non c'è overhead di trasferimento, quindi elapsed = computed.
       ns_computed = ns_elapsed;
       final_count = NUM_TASKS;
 
-   } else {
-      // Se il device è GPU o FPGA, usiamo la pipeline di offloading.
-
-      // Creazione del nodo sorgente della pipeline FF.
-      Emitter emitter(N, NUM_TASKS);
-
-      // Selezione e creazione dell'acceleratore.
-      std::unique_ptr<IAccelerator> accelerator;
-      if (device_type == "fpga")
-         accelerator = std::make_unique<FpgaAccelerator>();
-      else if (device_type == "gpu")
-         accelerator = std::make_unique<GpuAccelerator>();
-      else {
-         std::cerr << "[ERROR] Invalid device type '" << device_type
-                   << "'.\n\n";
-         print_usage(argv[0]);
-         return -1;
-      }
-
-      // Crea l'oggetto per raccogliere le statistiche e le promise per il
-      // conteggio finale.
-      StatsCollector stats;
-      std::future<size_t> count_future = stats.count_promise.get_future();
-
-      // Creazione del nodo di calcolo che usa l'acceleratore scelto.
-      ff_node_acc_t accNode(std::move(accelerator), &stats);
-
-      // Creazione della pipeline FF a 2 stadi, il cui secondo stadio incapsula
-      // una pipeline interna a 2 thread (producer, consumer).
-      ff_Pipe<> pipe(false, &emitter, &accNode);
-
-      std::cout << "[Main] Starting FF pipeline execution...\n";
-      auto t0 = std::chrono::steady_clock::now();
-
-      // Avvio della pipeline e attesa del completamento.
-      if (pipe.run_and_wait_end() < 0) {
-         std::cerr << "[ERROR] Main: Pipeline execution failed.\n";
-         return -1;
-      }
-      auto t1 = std::chrono::steady_clock::now();
-      std::cout << "[Main] FF Pipeline execution finished.\n";
-
-      // Raccolta dei risultati in nanosecondi.
-      final_count = count_future.get();
-      ns_elapsed =
-         std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
-      ns_computed = stats.computed_ns.load();
+   } else if (device_type == "gpu" || device_type == "fpga")
+      runAcceleratorPipeline(N, NUM_TASKS, device_type, ns_elapsed, ns_computed,
+                             final_count);
+   else {
+      std::cerr << "[ERROR] Invalid device type '" << device_type << "'.\n\n";
+      print_usage(argv[0]);
+      return -1;
    }
 
-   std::cout << "-------------------------------------------\n"
-             << "Total time for " << NUM_TASKS << " tasks on " << device_type
-             << ":\n"
-             << "N=" << N << " elapsed=" << ns_elapsed << " ns"
-             << ", computed=" << ns_computed << " ns\n"
-             << "-------------------------------------------\n"
-             << "Average time per task:\n"
-             << "Avg elapsed=" << ns_elapsed / (NUM_TASKS == 0 ? 1 : NUM_TASKS)
-             << " ns/task\n"
-             << "Avg computed="
-             << ns_computed / (NUM_TASKS == 0 ? 1 : NUM_TASKS) << " ns/task\n"
-             << "-------------------------------------------\n"
-             << "Tasks processed: " << final_count << " / " << NUM_TASKS
-             << (final_count == NUM_TASKS ? " (SUCCESS)" : " (FAILURE)") << "\n"
-             << "-------------------------------------------\n";
+   print_stats(N, NUM_TASKS, device_type, ns_elapsed, ns_computed, final_count);
 
    return 0;
 }

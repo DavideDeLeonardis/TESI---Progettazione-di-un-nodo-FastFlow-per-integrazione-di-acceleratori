@@ -13,7 +13,8 @@ add_executable(tesi-exec
     src/ff_node_acc_t.cpp
     src/CpuParallelRunner.cpp
     src/GpuAccelerator.cpp
-    src/FpgaAccelerator.cpp)
+    src/FpgaAccelerator.cpp
+    src/helpers/Helpers.cpp)
 
     
 target_include_directories(tesi-exec PRIVATE
