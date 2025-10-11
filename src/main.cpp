@@ -1,3 +1,4 @@
+#include "../include/ff_includes.hpp"
 #include "CpuAccelerator.hpp"
 #include "FpgaAccelerator.hpp"
 #include "GpuAccelerator.hpp"
@@ -16,7 +17,7 @@
  * Inizializza i dati di input una sola volta, poi crea dinamicamente un nuovo
  * oggetto Task per ogni richiesta dalla pipeline.
  */
-class Emitter : public ff::ff_node {
+class Emitter : public ff_node {
  public:
    /**
     * @param n Dimensione dei vettori da processare.
@@ -131,7 +132,7 @@ int main(int argc, char *argv[]) {
    // Creazione della pipeline FF a 2 stadi, il cui secondo stadio incapsula una
    // pipeline interna con 3 thread per i 3 stadi del calcolo (upload, execute,
    // download).
-   ff::ff_Pipe<> pipe(false, &emitter, &accNode);
+   ff_Pipe<> pipe(false, &emitter, &accNode);
 
    std::cout << "[Main] Starting FF pipeline execution...\n";
    auto t0 = std::chrono::steady_clock::now();
