@@ -204,7 +204,7 @@ void GpuAccelerator::release_buffer_set(size_t index) {
 }
 
 /**
- * @brief Stadio 1 della pipeline (Upload).
+ * @brief Stadio 1 (Upload).
  * Fa l'upload dei dati di input A e B dall'host alla device memory.
  * L'evento per la sincronizzazione (`task->event`) viene generato solo
  * dall'ultima operazione, garantendo che lo stadio successivo attenda il
@@ -238,7 +238,7 @@ void GpuAccelerator::send_data_async(void *task_context) {
 }
 
 /**
- * @brief Stadio 2 della pipeline (Execute).
+ * @brief Stadio 2 (Execute).
  * Imposta gli argomenti del kernel e accoda la sua esecuzione, rilasciando
  * l'evento del completamento del trasferimento dati e ottenendo un nuovo evento
  * che rappresenta il completamento del kernel.
@@ -275,10 +275,10 @@ void GpuAccelerator::execute_kernel_async(void *task_context) {
 }
 
 /**
- * @brief Stadio 3 della pipeline (Download).
- * Punto di sincronizzaione della pipeline. Recupera i risultati dalla device
- * memory alla memoria host, aspettando che l'upload e l'esecuzione del kernel
- * siano completati.
+ * @brief Stadio 3 (Download).
+ * Punto di sincronizzaione. Recupera i risultati dalla device memory alla
+ * memoria host, aspettando che l'upload e l'esecuzione del kernel siano
+ * completati.
  */
 void GpuAccelerator::get_results_blocking(void *task_context,
                                           long long &computed_ns) {
@@ -287,7 +287,7 @@ void GpuAccelerator::get_results_blocking(void *task_context,
    size_t required_size_bytes = sizeof(int) * task->n;
    BufferSet &current_buffers = buffer_pool_[task->buffer_idx];
    cl_event previous_event = task->event;
-   
+
    auto t0 = std::chrono::steady_clock::now();
 
    // Recupera i risultati dalla device memory alla memoria host.

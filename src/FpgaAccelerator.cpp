@@ -194,7 +194,7 @@ void FpgaAccelerator::release_buffer_set(size_t index) {
 }
 
 /**
- * @brief Stadio 1 della pipeline (Upload).
+ * @brief Stadio 1 (Upload).
  * Fa l'upload dei dati di input A e B dall'host alla device memory.
  * L'evento per la sincronizzazione (`task->event`) viene generato solo
  * dall'ultima operazione, garantendo che lo stadio successivo attenda il
@@ -226,6 +226,12 @@ void FpgaAccelerator::send_data_async(void *task_context) {
              return);
 }
 
+/**
+ * @brief Stadio 2 (Execute).
+ * Imposta gli argomenti del kernel e accoda la sua esecuzione, rilasciando
+ * l'evento del completamento del trasferimento dati e ottenendo un nuovo evento
+ * che rappresenta il completamento del kernel.
+ */
 void FpgaAccelerator::execute_kernel_async(void *task_context) {
    cl_int ret; // Codice di ritorno delle chiamate OpenCL.
    auto *task = static_cast<Task *>(task_context);
@@ -254,6 +260,12 @@ void FpgaAccelerator::execute_kernel_async(void *task_context) {
       clReleaseEvent(previous_event);
 }
 
+/**
+ * @brief Stadio 3 (Download).
+ * Punto di sincronizzaione. Recupera i risultati dalla device memory alla
+ * memoria host, aspettando che l'upload e l'esecuzione del kernel siano
+ * completati.
+ */
 void FpgaAccelerator::get_results_blocking(void *task_context,
                                            long long &computed_ns) {
    cl_int ret;

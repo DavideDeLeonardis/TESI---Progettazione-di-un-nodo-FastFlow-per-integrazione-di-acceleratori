@@ -12,9 +12,7 @@
 #endif
 
 /**
- * @brief Implementazione di IAccelerator che gestisce l'offloading su GPU
- * tramite OpenCL con un modello a pipeline a 3 stadi (upload, execute,
- * download)
+ * @brief Implementazione di IAccelerator che gestisce l'offloading su GPU.
  */
 class GpuAccelerator : public IAccelerator {
  public:
