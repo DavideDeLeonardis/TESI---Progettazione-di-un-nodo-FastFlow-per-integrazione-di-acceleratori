@@ -3,7 +3,7 @@ Su Linux (VM)
    ./build/tesi-exec 1000000 100 cpu
    ./build/tesi-exec 1000000 100 fpga
 
-   # ----- Test con N = 16,777,216 -----
+   # ----- Test con N = 7449999 -----
    ./build/tesi-exec 16777216 100 cpu
    ./build/tesi-exec 16777216 100 fpga
 
@@ -25,97 +25,4 @@ Su macOS
    ./build/tesi-exec 33554432 100 cpu
    ./build/tesi-exec 33554432 100 gpu
 
-
-
-
-
-// VM
-Total time for 100 tasks on cpu:
-N=1000000 elapsed=515496882 ns, computed=513293450 ns
--------------------------------------------
-Average time per task:
-Avg elapsed=5154968 ns/task
-Avg computed=5132934 ns/task
-
-
-Total time for 100 tasks on fpga:
-N=1000000 elapsed=935730972 ns, computed=692117773 ns
--------------------------------------------
-Average time per task:
-Avg elapsed=9357309 ns/task
-Avg computed=6921177 ns/task
-
-
-Total time for 100 tasks on cpu:
-N=16777216 elapsed=8996150235 ns, computed=8992687539 ns
--------------------------------------------
-Average time per task:
-Avg elapsed=89961502 ns/task
-Avg computed=89926875 ns/task
-
-
-./build/tesi-exec 16777216 100 fpga
-[XRT] ERROR: failed to allocate bo: Operation not permitted
-
-
-Total time for 100 tasks on cpu:
-N=33554432 elapsed=18169238787 ns, computed=18165661541 ns
--------------------------------------------
-Average time per task:
-Avg elapsed=181692387 ns/task
-Avg computed=181656615 ns/task
-
-
-./build/tesi-exec 33554432 100 fpga
-[XRT] ERROR: failed to allocate bo: Operation not permitted
-
-
-
-// MACOS
-Total time for 100 tasks on cpu:
-N=1000000 elapsed=256626583 ns, computed=254719618 ns
--------------------------------------------
-Average time per task:
-Avg elapsed=2566265 ns/task
-Avg computed=2547196 ns/task
-
-
-Total time for 100 tasks on gpu:
-N=1000000 elapsed=183169917 ns, computed=94443798 ns
--------------------------------------------
-Average time per task:
-Avg elapsed=1831699 ns/task
-Avg computed=944437 ns/task
-
-
-Total time for 100 tasks on cpu:
-N=16777216 elapsed=4198263959 ns, computed=4194558877 ns
--------------------------------------------
-Average time per task:
-Avg elapsed=41982639 ns/task
-Avg computed=41945588 ns/task
-
-
-Total time for 100 tasks on gpu:
-N=16777216 elapsed=969123000 ns, computed=891626541 ns
--------------------------------------------
-Average time per task:
-Avg elapsed=9691230 ns/task
-Avg computed=8916265 ns/task
-
-
-Total time for 100 tasks on cpu:
-N=33554432 elapsed=8351943166 ns, computed=8347802543 ns
--------------------------------------------
-Average time per task:
-Avg elapsed=83519431 ns/task
-Avg computed=83478025 ns/task
-
-
-Total time for 100 tasks on gpu:
-N=33554432 elapsed=1624070958 ns, computed=1541983458 ns
--------------------------------------------
-Average time per task:
-Avg elapsed=16240709 ns/task
-Avg computed=15419834 ns/task
 

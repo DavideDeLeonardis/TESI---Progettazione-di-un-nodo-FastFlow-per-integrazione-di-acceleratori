@@ -43,6 +43,15 @@ Punti chiave da ricordare:
    Overlapping: mentre il kernel n è in esecuzione, il producer può preparare i dati per n + 1 e il consumer può leggere i risultati di n – 1.
    Portabilità: il flusso è identico per GPU (Apple) e FPGA (Xilinx); cambiano solo le funzioni specifiche usate dentro DeviceAdapter.
 
+   Per dimostrare il valore dell'FPGA, devi confrontarlo con una CPU usata al massimo delle sue potenzialità, non con un singolo core.
+
+   Dimostrare la Potenza di FastFlow: L'obiettivo è mostrare che FastFlow è un framework flessibile, capace di orchestrare in modo efficiente sia il parallelismo interno alla CPU sia quello esterno delegato a un acceleratore.
+
+   Capire i Trade-Off: Implementando entrambe le versioni, sarai costretto a misurare e analizzare quando conviene davvero fare l'offloading. 
+      Potresti scoprire che per problemi di piccole dimensioni, l'overhead del trasferimento dati verso l'FPGA rende la soluzione CPU-parallela più veloce.
+
+
+
 
 
 // BUILD AND EXEC:
