@@ -8,7 +8,7 @@
  * della CPU utilizzando FastFlow.
  */
 long long executeCpuParallelTasks(size_t N, size_t NUM_TASKS) {
-   std::cout << "[CPU Parallel] Running tasks in PARALLEL CPU mode...\n\n";
+   std::cout << "[CPU Parallel] Running tasks in PARALLEL on CPU.\n\n";
 
    // Inizializzazione dei dati.
    std::vector<int> a(N), b(N), c(N);
