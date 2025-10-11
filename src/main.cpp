@@ -94,8 +94,9 @@ void runAcceleratorPipeline(size_t N, size_t NUM_TASKS,
    // Creazione del nodo di calcolo che usa l'acceleratore scelto.
    ff_node_acc_t accNode(std::move(accelerator), &stats);
 
-   // Creazione della pipeline FF a 2 stadi, il cui secondo stadio incapsula
-   // una pipeline interna a 2 thread (producer, consumer).
+   // Creazione della pipeline FF a 2 stadi (Emitter, ff_node_acc_t), il cui
+   // secondo stadio incapsula una pipeline interna a 2 thread (producer,
+   // consumer).
    ff_Pipe<> pipe(&emitter, &accNode);
 
    std::cout << "[Main] Starting FF pipeline execution...\n";
