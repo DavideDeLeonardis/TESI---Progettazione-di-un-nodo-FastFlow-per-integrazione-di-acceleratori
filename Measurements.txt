@@ -1,43 +1,42 @@
-Su Linux (nella VM)
-Bash
+Su Linux (VM)
+   # ----- Test con N = 1,000,000 -----
+   ./build/tesi-exec 1000000 100 cpu
+   ./build/tesi-exec 1000000 100 fpga
 
-# ----- Test con N = 1,000,000 -----
-./build/tesi-exec 1000000 100 cpu
-./build/tesi-exec 1000000 100 fpga
+   # ----- Test con N = 16,777,216 -----
+   ./build/tesi-exec 16777216 100 cpu
+   ./build/tesi-exec 16777216 100 fpga
 
-# ----- Test con N = 16,777,216 -----
-./build/tesi-exec 16777216 100 cpu
-./build/tesi-exec 16777216 100 fpga
+   # ----- Test con N = 33,554,432 -----
+   ./build/tesi-exec 33554432 100 cpu
+   ./build/tesi-exec 33554432 100 fpga
 
-# ----- Test con N = 33,554,432 -----
-./build/tesi-exec 33554432 100 cpu
-./build/tesi-exec 33554432 100 fpga
+
 Su macOS
-Bash
+   # ----- Test con N = 1,000,000 -----
+   ./build/tesi-exec 1000000 100 cpu
+   ./build/tesi-exec 1000000 100 gpu
 
-# ----- Test con N = 1,000,000 -----
-./build/tesi-exec 1000000 100 cpu
-./build/tesi-exec 1000000 100 gpu
+   # ----- Test con N = 16,777,216 -----
+   ./build/tesi-exec 16777216 100 cpu
+   ./build/tesi-exec 16777216 100 gpu
 
-# ----- Test con N = 16,777,216 -----
-./build/tesi-exec 16777216 100 cpu
-./build/tesi-exec 16777216 100 gpu
-
-# ----- Test con N = 33,554,432 -----
-./build/tesi-exec 33554432 100 cpu
-./build/tesi-exec 33554432 100 gpu
+   # ----- Test con N = 33,554,432 -----
+   ./build/tesi-exec 33554432 100 cpu
+   ./build/tesi-exec 33554432 100 gpu
 
 
 
 
 
-//VM
-total time for 100 tasks on cpu:
+// VM
+Total time for 100 tasks on cpu:
 N=1000000 elapsed=515496882 ns, computed=513293450 ns
 -------------------------------------------
 Average time per task:
 Avg elapsed=5154968 ns/task
 Avg computed=5132934 ns/task
+
 
 Total time for 100 tasks on fpga:
 N=1000000 elapsed=935730972 ns, computed=692117773 ns
@@ -56,26 +55,6 @@ Avg computed=89926875 ns/task
 
 
 ./build/tesi-exec 16777216 100 fpga
-
-Configuration: N=16777216, NUM_TASKS=100, Device=fpga
-
-[Main] Starting FF pipeline execution...
-[Accelerator Node] Initializing...
-[FpgaAccelerator] Initialization successful.
-[Accelerator Node] Internal 3-stage pipeline started.
-
-[FpgaAccelerator - START] Processing task 1 with N=16777216...
-  [FpgaAccelerator - DEBUG] Allocating pool buffers for 67108864 bytes.
-XRT build version: 2.16.204
-Build hash: fa4c0045003fed0acea4593788dce5ef6d0b66ee
-Build date: 2023-10-11 23:45:57
-Git branch: 2023.2
-PID: 2088608
-UID: 1011
-[Fri Oct 10 14:25:16 2025 GMT]
-HOST: pianosa
-EXE: /home/deleonardis/Tesi/build/tesi-exec
-[XRT] ERROR: failed to allocate bo: Operation not permitted
 [XRT] ERROR: failed to allocate bo: Operation not permitted
 
 
@@ -88,29 +67,8 @@ Avg computed=181656615 ns/task
 
 
 ./build/tesi-exec 33554432 100 fpga
-
-Configuration: N=33554432, NUM_TASKS=100, Device=fpga
-
-[Main] Starting FF pipeline execution...
-[Accelerator Node] Initializing...
-[FpgaAccelerator] Initialization successful.
-[Accelerator Node] Internal 3-stage pipeline started.
-
-[FpgaAccelerator - START] Processing task 1 with N=33554432...
-  [FpgaAccelerator - DEBUG] Allocating pool buffers for 134217728 bytes.
-XRT build version: 2.16.204
-Build hash: fa4c0045003fed0acea4593788dce5ef6d0b66ee
-Build date: 2023-10-11 23:45:57
-Git branch: 2023.2
-PID: 2088626
-UID: 1011
-[Fri Oct 10 14:26:41 2025 GMT]
-HOST: pianosa
-EXE: /home/deleonardis/Tesi/build/tesi-exec
 [XRT] ERROR: failed to allocate bo: Operation not permitted
-[ERROR] FpgaAccelerator: Failed to allocate buffer pool.
-[FpgaAccelerator - START] Processing task 2 with N=33554432...
-  [FpgaAccelerator - DEBUG] Allocating pool buffers for 134217728 bytes.
+
 
 
 // MACOS
