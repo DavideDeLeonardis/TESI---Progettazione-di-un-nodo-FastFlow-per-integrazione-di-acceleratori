@@ -52,7 +52,7 @@ Punti chiave da ricordare:
    rm -rf external/fastflow; git clone https://github.com/fastflow/fastflow.git external/fastflow
 
 // SYNC Mac with VM
-   rsync -av --exclude 'build/' --exclude '.DS_Store'  /Users/davidedeleonardis/Desktop/Tesi/ deleonardis@131.114.3.250:~/Tesi/
+   rsync -av --exclude 'build/' --exclude '.DS_Store' --exclude '.git/' --exclude '.vscode/'  /Users/davidedeleonardis/Desktop/Tesi/ deleonardis@131.114.3.250:~/Tesi/
 
 // COMPILAZIONE E LINKING SU FPGA per ottenere xclbin (in Tesi)
 v++ -c -k krnl_vadd --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw -o kernel/krnl_vadd.xo kernel/krnl_vadd.cpp
@@ -255,8 +255,8 @@ LIMIT for N in VM: 7449999
 
 
 
-La CPU fa il Manager: Quando il nostro uploaderLoop sulla CPU chiama send_data_async, non sta trasferendo i dati lui stesso. 
-Sta dando un ordine al gestore della memoria del device (un'unità hardware chiamata DMA) di iniziare il trasferimento. 
+La CPU fa il Manager: Quando l'uploaderLoop sulla CPU chiama send_data_async, non sta trasferendo i dati lui stesso. 
+Sta dando un ordine al gestore della memoria del device (DMA) di iniziare il trasferimento. 
 Fatto questo, il thread della CPU è libero e può immediatamente iniziare a lavorare sul task successivo.
 
 Il Parallelismo Reale: Mentre la GPU sta eseguendo il calcolo per il Task N, la CPU è completamente libera e può usare quel tempo per preparare e inviare i dati per il Task N+1. 
