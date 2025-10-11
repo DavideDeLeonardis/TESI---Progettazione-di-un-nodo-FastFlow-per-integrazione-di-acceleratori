@@ -146,8 +146,7 @@ int main(int argc, char *argv[]) {
       ff_node_acc_t accNode(std::move(accelerator), std::move(count_promise));
 
       // Creazione della pipeline FF a 2 stadi, il cui secondo stadio incapsula
-      // una pipeline interna con 3 thread per i 3 stadi del calcolo (upload,
-      // execute, download).
+      // una pipeline interna con 2 thread.
       ff_Pipe<> pipe(false, &emitter, &accNode);
 
       std::cout << "[Main] Starting FF pipeline execution...\n";
