@@ -1,3 +1,6 @@
+#pragma once
+
+// DO NOT CHANGE ORDER OF INCLUDES
 #include <ff/pipeline.hpp>
 #include <ff/farm.hpp>
 #include <ff/all2all.hpp>

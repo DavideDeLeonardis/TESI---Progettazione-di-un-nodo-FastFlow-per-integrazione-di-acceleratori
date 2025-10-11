@@ -1,4 +1,5 @@
 #pragma once
+
 #include "../include/ff_includes.hpp"
 #include "../include/types.hpp"
 #include "IAccelerator.hpp"

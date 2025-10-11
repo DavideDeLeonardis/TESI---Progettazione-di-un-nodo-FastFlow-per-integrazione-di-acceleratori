@@ -57,7 +57,8 @@ int ff_node_acc_t::svc_init() {
    if (!accelerator_ || !accelerator_->initialize())
       return -1;
 
-   // Alloca le code per la comunicazione tra gli stadi della pipeline interna
+   // Alloca le 3 code interne, quali la coda di ingresso, la coda per i task
+   // pronti per l'esecuzione e la coda per i task pronti per il download.
    inQ_ = new TaskQ(1024);
    kernel_ready_queue_ = new TaskQ(1024);
    readout_ready_queue_ = new TaskQ(1024);
@@ -78,7 +79,7 @@ int ff_node_acc_t::svc_init() {
 
 /**
  * @brief Metodo principale del nodo, chiamato da FF per ogni task. Riceve un
- * task e lo inserisce nella prima coda (inQ_).
+ * task e lo inserisce nella inQ_.
  * @param task Puntatore al task in arrivo.
  * @return FF_GO_ON -> il nodo è pronto a ricevere altri task.
  */
@@ -165,7 +166,7 @@ void ff_node_acc_t::downloaderLoop() {
 
       if (ptr == SENTINEL) {
          // La pipeline è vuota e lo stream è terminato. Comunica il conteggio
-         // finale dei task processati al thread main tramite la promise.
+         // finale dei task processati al main thread tramite la promise.
          count_promise_.set_value(tasks_processed_.load());
          break;
       }

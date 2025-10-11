@@ -4,9 +4,10 @@
 #include <iostream>
 
 /**
- * @brief La computazione usando solo la CPU non è parallelizzata, in quanto
- * l'host e il device sono la stessa entità. È solo una SIMULAZIONE di una
- * pipeline.
+ * @brief La computazione usando solo la CPU non è parallelizzata, ma
+ * sequenziale. È solo una SIMULAZIONE di una pipeline, dove le fasi di
+ * esecuzione del kernel e recupero risultati sono eseguite nel metodo
+ * get_results_blocking.
  */
 
 CpuAccelerator::CpuAccelerator() {}
@@ -25,13 +26,9 @@ size_t CpuAccelerator::acquire_buffer_set() { return 0; }
 
 void CpuAccelerator::release_buffer_set(size_t) {}
 
-void CpuAccelerator::send_data_async(void *) {
-   // I dati sono già nella RAM accessibile alla CPU.
-}
+void CpuAccelerator::send_data_async(void *) {}
 
-void CpuAccelerator::execute_kernel_async(void *) {
-   // L'esecuzione avverrà in modo sincrono nel passo successivo.
-}
+void CpuAccelerator::execute_kernel_async(void *) {}
 
 /**
  * @brief Esegue il calcolo e attende il risultato.

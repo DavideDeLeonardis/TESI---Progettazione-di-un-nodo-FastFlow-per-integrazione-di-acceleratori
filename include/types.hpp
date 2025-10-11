@@ -7,7 +7,7 @@
 #include <CL/cl.h>
 #endif
 
-// Rappresenta un task di calcolo
+// Task di calcolo
 struct Task {
    int *a, *b, *c; // Puntatori ai vettori di input/output
    size_t n;       // Dimensione dei vettori
