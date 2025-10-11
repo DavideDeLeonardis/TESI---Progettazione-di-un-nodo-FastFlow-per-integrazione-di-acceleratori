@@ -138,15 +138,16 @@ int main(int argc, char *argv[]) {
          return -1;
       }
 
-      // Dati per ottenere il conteggio finale dei task processati.
-      std::promise<size_t> count_promise;
-      std::future<size_t> count_future = count_promise.get_future();
+      // Crea l'oggetto per raccogliere le statistiche e le promise per il
+      // conteggio finale.
+      StatsCollector stats;
+      std::future<size_t> count_future = stats.count_promise.get_future();
 
       // Creazione del nodo di calcolo che usa l'acceleratore scelto.
-      ff_node_acc_t accNode(std::move(accelerator), std::move(count_promise));
+      ff_node_acc_t accNode(std::move(accelerator), &stats);
 
       // Creazione della pipeline FF a 2 stadi, il cui secondo stadio incapsula
-      // una pipeline interna con 2 thread.
+      // una pipeline interna a 2 thread (producer, consumer).
       ff_Pipe<> pipe(false, &emitter, &accNode);
 
       std::cout << "[Main] Starting FF pipeline execution...\n";
@@ -164,7 +165,7 @@ int main(int argc, char *argv[]) {
       final_count = count_future.get();
       ns_elapsed =
          std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
-      ns_computed = accNode.getComputeTime_ns();
+      ns_computed = stats.computed_ns.load();
    }
 
    std::cout << "-------------------------------------------\n"
@@ -183,7 +184,5 @@ int main(int argc, char *argv[]) {
              << (final_count == NUM_TASKS ? " (SUCCESS)" : " (FAILURE)") << "\n"
              << "-------------------------------------------\n";
 
-   // La distruzione degli oggetti (pipe, accNode, accelerator, emitter)
-   // viene gestita automaticamente dallo stack.
    return 0;
 }
