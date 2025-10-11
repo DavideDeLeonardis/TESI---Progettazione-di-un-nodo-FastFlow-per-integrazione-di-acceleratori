@@ -6,8 +6,7 @@
 /**
  * @brief Implementazione del nodo FastFlow che orchestra l'offloading.
  *
- * Questo nodo incapsula una pipeline interna a 3 stadi, gestita da tre thread
- * concorrenti:
+ * Il nodo incapsula una pipeline interna a 3 stadi, gestita da tre thread:
  * 1. Uploader: Trasferimento dati asincrono Host -> Device.
  * 2. Launcher: Esecuzione asincrona del kernel sul Device.
  * 3. Downloader: Trasferimento dati sincrono Device -> Host e
