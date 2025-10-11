@@ -6,5 +6,6 @@
 #include <ff/all2all.hpp>
 #include <ff/graph_utils.hpp>
 #include <ff/ubuffer.hpp>
+#include <ff/parallel_for.hpp>
 
 using namespace ff;

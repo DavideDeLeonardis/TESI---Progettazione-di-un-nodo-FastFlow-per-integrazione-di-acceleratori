@@ -1,5 +1,5 @@
 #include "../include/ff_includes.hpp"
-#include "CpuAccelerator.hpp"
+#include "CpuParallelRunner.hpp"
 #include "FpgaAccelerator.hpp"
 #include "GpuAccelerator.hpp"
 #include "ff_node_acc_t.hpp"
@@ -105,52 +105,68 @@ int main(int argc, char *argv[]) {
    std::cout << "\nConfiguration: N=" << N << ", NUM_TASKS=" << NUM_TASKS
              << ", Device=" << device_type << "\n\n";
 
-   // Creazione del nodo sorgente della pipeline FF
-   Emitter emitter(N, NUM_TASKS);
+   long long ns_elapsed = 0;
+   long long ns_computed = 0;
+   size_t final_count = 0;
 
-   // Selezione e creazione dell'acceleratore
-   std::unique_ptr<IAccelerator> accelerator;
-   if (device_type == "fpga")
-      accelerator = std::make_unique<FpgaAccelerator>();
-   else if (device_type == "gpu")
-      accelerator = std::make_unique<GpuAccelerator>();
-   else if (device_type == "cpu")
-      accelerator = std::make_unique<CpuAccelerator>();
-   else {
-      std::cerr << "[ERROR] Invalid device type '" << device_type << "'.\n\n";
-      print_usage(argv[0]);
-      return -1;
+   // In base al device scelto, esegue la parallelizzazione su CPU multicore o
+   // la pipeline con offloading su GPU/FPGA.
+   if (device_type == "cpu") {
+      // Esegue i task in parallelo su CPU.
+      ns_elapsed = executeCpuParallelTasks(N, NUM_TASKS);
+
+      // Su CPU non c'è overhead di trasferimento quindi elapsed = computed.
+      ns_computed = ns_elapsed;
+      final_count = NUM_TASKS;
+
+   } else {
+      // Se il device è GPU o FPGA, usiamo la pipeline di offloading.
+
+      // Creazione del nodo sorgente della pipeline FF.
+      Emitter emitter(N, NUM_TASKS);
+
+      // Selezione e creazione dell'acceleratore.
+      std::unique_ptr<IAccelerator> accelerator;
+      if (device_type == "fpga")
+         accelerator = std::make_unique<FpgaAccelerator>();
+      else if (device_type == "gpu")
+         accelerator = std::make_unique<GpuAccelerator>();
+      else {
+         std::cerr << "[ERROR] Invalid device type '" << device_type
+                   << "'.\n\n";
+         print_usage(argv[0]);
+         return -1;
+      }
+
+      // Dati per ottenere il conteggio finale dei task processati.
+      std::promise<size_t> count_promise;
+      std::future<size_t> count_future = count_promise.get_future();
+
+      // Creazione del nodo di calcolo che usa l'acceleratore scelto.
+      ff_node_acc_t accNode(std::move(accelerator), std::move(count_promise));
+
+      // Creazione della pipeline FF a 2 stadi, il cui secondo stadio incapsula
+      // una pipeline interna con 3 thread per i 3 stadi del calcolo (upload,
+      // execute, download).
+      ff_Pipe<> pipe(false, &emitter, &accNode);
+
+      std::cout << "[Main] Starting FF pipeline execution...\n";
+      auto t0 = std::chrono::steady_clock::now();
+
+      // Avvio della pipeline e attesa del completamento.
+      if (pipe.run_and_wait_end() < 0) {
+         std::cerr << "[ERROR] Main: Pipeline execution failed.\n";
+         return -1;
+      }
+      auto t1 = std::chrono::steady_clock::now();
+      std::cout << "[Main] FF Pipeline execution finished.\n";
+
+      // Raccolta dei risultati in nanosecondi.
+      final_count = count_future.get();
+      ns_elapsed =
+         std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
+      ns_computed = accNode.getComputeTime_ns();
    }
-
-   // Dati per ottenere il conteggio finale dei task processati
-   std::promise<size_t> count_promise;
-   std::future<size_t> count_future = count_promise.get_future();
-
-   // Creazione del nodo di calcolo che usa l'acceleratore scelto
-   ff_node_acc_t accNode(std::move(accelerator), std::move(count_promise));
-
-   // Creazione della pipeline FF a 2 stadi, il cui secondo stadio incapsula una
-   // pipeline interna con 3 thread per i 3 stadi del calcolo (upload, execute,
-   // download).
-   ff_Pipe<> pipe(false, &emitter, &accNode);
-
-   std::cout << "[Main] Starting FF pipeline execution...\n";
-   auto t0 = std::chrono::steady_clock::now();
-
-   // Avvio della pipeline e attesa del completamento
-   if (pipe.run_and_wait_end() < 0) {
-      std::cerr << "[ERROR] Main: Pipeline execution failed.\n";
-      return -1;
-   }
-   auto t1 = std::chrono::steady_clock::now();
-   std::cout << "[Main] FF Pipeline execution finished.\n";
-
-   size_t final_count = count_future.get();
-
-   // Raccolta dei risultati in nanosecondi
-   auto ns_elapsed =
-      std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
-   auto ns_computed = accNode.getComputeTime_ns();
 
    std::cout << "-------------------------------------------\n"
              << "Total time for " << NUM_TASKS << " tasks on " << device_type
