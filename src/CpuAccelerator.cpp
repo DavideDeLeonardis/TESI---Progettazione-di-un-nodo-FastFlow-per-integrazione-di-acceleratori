@@ -5,9 +5,9 @@
 
 /**
  * @brief La computazione usando solo la CPU non è parallelizzata, ma
- * sequenziale. È solo una SIMULAZIONE di una pipeline, dove le fasi di
- * esecuzione del kernel e recupero risultati sono eseguite nel metodo
- * get_results_blocking.
+ * sequenziale, in quanto host e device sono la stessa entità. È solo una
+ * SIMULAZIONE di una pipeline, dove le fasi di esecuzione del kernel e recupero
+ * risultati sono eseguite nel metodo get_results_blocking.
  */
 
 CpuAccelerator::CpuAccelerator() {}
@@ -18,7 +18,7 @@ CpuAccelerator::~CpuAccelerator() {
 
 bool CpuAccelerator::initialize() {
    std::cerr
-      << "[CpuAccelerator] Initialization successful. Simulating pipeline...\n";
+      << "[CpuAccelerator] Initialization successful. SIMULATING PIPELINE...\n";
    return true;
 }
 
