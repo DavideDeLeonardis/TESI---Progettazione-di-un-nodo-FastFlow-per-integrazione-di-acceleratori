@@ -1,36 +1,29 @@
 #pragma once
 
 #include "../include/ff_includes.hpp"
-#include "../include/types.hpp"
+#include "BlockingQueue.hpp"
 #include "IAccelerator.hpp"
+#include "StatsCollector.hpp"
+#include "Task.hpp"
 #include <atomic>
 #include <future>
-#include <iostream>
 #include <memory>
 #include <thread>
 
 /**
  * @brief Nodo FastFlow che orchestra l'offloading su un acceleratore.
  *
- * Implementa una pipeline interna a 3 stadi (Upload, Execute, Download)
- * gestita da 3 thread dedicati per sovrapporre calcolo e trasferimenti dati:
- * 1. Uploader: Prepara i dati e avvia il trasferimento asincrono verso il
- * device.
- * 2. Launcher: Avvia l'esecuzione asincrona del kernel sul device.
- * 3. Downloader: Attende il completamento, recupera i risultati e
- * finalizza il task.
+ * Implementa una pipeline interna a 2 stadi (Producer, Consumer) gestita da 2
+ * thread:
+ * 1. Producer (Uploader+Launcher): Trasferisce i dati dall'host al device e
+ *   avvia l'esecuzione del kernel.
+ * 2. Consumer (Downloader): Trasferisce i risultati dal device all'host.
  */
 class ff_node_acc_t : public ff_node {
  public:
    explicit ff_node_acc_t(std::unique_ptr<IAccelerator> acc,
-                          std::promise<size_t> &&count_promise);
+                          StatsCollector *stats);
    ~ff_node_acc_t() override;
-
-   /**
-    * @brief Restituisce il tempo totale di calcolo effettivo (senza overhead
-    * di trasferimento dati) in nanosecondi.
-    */
-   long long getComputeTime_ns() const;
 
  protected:
    int svc_init() override;
@@ -42,30 +35,18 @@ class ff_node_acc_t : public ff_node {
    // interne ai thread.
    static void *const SENTINEL;
 
-   // ---- Loops dei 3 stadi della pipeline interna
-   // Prende un task, un buffer e avvia il trasferimento dati asincrono.
-   void uploaderLoop();
-   // Prende un task con i dati pronti e avvia asincronamente il kernel.
-   void launcherLoop();
-   // Prende un task eseguito, attende/recupera i risultati e finalizza.
-   void downloaderLoop();
+   // Loops dei 2 stadi della pipeline interna.
+   void producerLoop();
+   void consumerLoop();
 
+   // Puntatori all'acceleratore e all'oggetto per le statistiche.
    std::unique_ptr<IAccelerator> accelerator_;
+   StatsCollector *stats_;
 
-   // Code interne Single-Producer/Single-Consumer per la pipeline.
-   using TaskQ = uSWSR_Ptr_Buffer;
-   // Coda per ricevere i dati dalla pipeline FF esterna.
-   TaskQ *inQ_{nullptr};
-   // Coda per i task pronti all'esecuzione del kernel.
-   TaskQ *kernel_ready_queue_{nullptr};
-   // Coda per i task pronti per la lettura dal device all'host.
-   TaskQ *readout_ready_queue_{nullptr};
+   // Code per i task in ingresso dalla pipeline FF e per i task pronti per
+   // il download dal device all'host.
+   BlockingQueue<void *> inQ_;
+   BlockingQueue<void *> readyQ_;
 
-   // Contatori e promise per i risultati.
-   std::atomic<long long> computed_ns_{0};
-   std::atomic<size_t> tasks_processed_{0};
-   std::promise<size_t> count_promise_;
-
-   // I 3 thread per gli stadi della pipeline interna.
-   std::thread uploaderTh_, launcherTh_, downloaderTh_;
+   std::thread producerTh_, consumerTh_;
 };

@@ -3,9 +3,7 @@
 #include <atomic>
 #include <future>
 
-/**
- * @brief Oggetto per raccogliere le statistiche dai nodi della pipeline.
- */
+// Struttura per raccogliere statistiche sull'elaborazione dei task.
 struct StatsCollector {
    std::atomic<long long> computed_ns{0};
    std::atomic<size_t> tasks_processed{0};

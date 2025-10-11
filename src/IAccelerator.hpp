@@ -1,12 +1,14 @@
 #pragma once
 
-#include "../include/types.hpp"
+#include "Task.hpp"
 
 /**
  * @brief Interfaccia per un acceleratore hardware (es. GPU, FPGA).
  *
- * Definisce i 3 stadi della pipeline interna asincrona e la gestione del pool
- * di buffer.
+ * Definisce le funzioni per ottenere e rilasciare i buffer, e le 3 funzioni
+ * principali che implementano i due thread della pipeline:
+ * - Thread Producer (stadi 1 e 2): send_data_async() e execute_kernel_async()
+ * - Thread Consumer (stadio 3): get_results_blocking()
  */
 class IAccelerator {
  public:
