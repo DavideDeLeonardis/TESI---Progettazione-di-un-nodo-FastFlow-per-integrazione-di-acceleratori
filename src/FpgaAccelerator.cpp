@@ -156,8 +156,8 @@ bool FpgaAccelerator::reallocate_buffers(size_t required_size_bytes) {
                                                required_size_bytes, NULL, &ret);
       if (ret != CL_SUCCESS) {
          std::cerr
-            << "[ERROR] FpgaAccelerator: Failed to allocate buffer pool.\n";
-         return false;
+            << "\n[ERROR] FpgaAccelerator: Failed to allocate buffer pool.\n";
+         exit(EXIT_FAILURE);
       }
    }
 
@@ -167,30 +167,31 @@ bool FpgaAccelerator::reallocate_buffers(size_t required_size_bytes) {
 
 /**
  * @brief Acquisisce un indice di buffer dal pool. Se nessun buffer è
- * disponibile, attende in modo non bloccante.
+ * disponibile per un thread da acquisire, attende in modo non bloccante.
  */
 size_t FpgaAccelerator::acquire_buffer_set() {
    std::unique_lock<std::mutex> lock(pool_mutex_);
 
    // Attende finché non c'è un buffer libero.
-   while (free_buffer_indices_.empty()) {
-      lock.unlock();
-      std::this_thread::yield();
-      lock.lock();
-   }
+   buffer_available_cond_.wait(
+      lock, [this] { return !free_buffer_indices_.empty(); });
 
-   // Estrae e restituisce l'indice del buffer libero.
+   // Th risvegliato. Estrae e restituisce l'indice del buffer libero.
    size_t index = free_buffer_indices_.front();
    free_buffer_indices_.pop();
    return index;
 }
 
 /**
- * @brief Rilascia un indice di buffer nel pool.
+ * @brief Rilascia un indice di buffer nel pool e notifica i thread in attesa.
  */
 void FpgaAccelerator::release_buffer_set(size_t index) {
-   std::lock_guard<std::mutex> lock(pool_mutex_);
-   free_buffer_indices_.push(index);
+   {
+      std::lock_guard<std::mutex> lock(pool_mutex_);
+      free_buffer_indices_.push(index);
+   }
+
+   buffer_available_cond_.notify_one();
 }
 
 /**

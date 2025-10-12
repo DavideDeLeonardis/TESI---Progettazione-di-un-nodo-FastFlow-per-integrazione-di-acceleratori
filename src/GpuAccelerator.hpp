@@ -1,6 +1,7 @@
 #pragma once
 
 #include "IAccelerator.hpp"
+#include <condition_variable>
 #include <mutex>
 #include <queue>
 #include <vector>
@@ -48,11 +49,12 @@ class GpuAccelerator : public IAccelerator {
       cl_mem bufferC{nullptr};
    };
 
-   // Pool di buffer nel device.
+   // Dati per il pool di buffer nel device e vars per gestione concorrenza.
    std::vector<BufferSet> buffer_pool_;
    std::queue<size_t> free_buffer_indices_;
    static const size_t POOL_SIZE = 3;
    std::mutex pool_mutex_;
+   std::condition_variable buffer_available_cond_;
 
    // Dimensione attualmente allocata per i buffer nel pool.
    size_t allocated_size_bytes_{0};
