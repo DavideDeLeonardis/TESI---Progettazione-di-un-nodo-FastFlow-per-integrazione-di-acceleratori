@@ -1,6 +1,34 @@
 #include "Helpers.hpp"
 #include <iostream>
 
+// Helper per il parsing degli argomenti della riga di comando.
+void parse_args(int argc, char *argv[], size_t &N, size_t &NUM_TASKS,
+                std::string &device_type) {
+   if (argc > 1 &&
+       (std::string(argv[1]) == "-h" || std::string(argv[1]) == "--help")) {
+      print_usage(argv[0]);
+      exit(0);
+   }
+
+   try {
+      if (argc > 1)
+         N = std::stoull(argv[1]);
+      if (argc > 2)
+         NUM_TASKS = std::stoull(argv[2]);
+      if (argc > 3)
+         device_type = argv[3];
+   } catch (const std::invalid_argument &e) {
+      std::cerr << "[ERROR] Invalid numeric argument provided.\n\n";
+      print_usage(argv[0]);
+      exit(-1);
+   }
+
+   if (N == 0) {
+      std::cerr << "[FATAL] La dimensione dei vettori (N) non può essere 0.\n";
+      exit(EXIT_FAILURE);
+   }
+}
+
 // Helper per stampare le istruzioni d'uso.
 void print_usage(const char *prog_name) {
    std::cerr << "Usage: " << prog_name << " [N] [NUM_TASKS] [DEVICE]\n"

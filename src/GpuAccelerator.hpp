@@ -13,6 +13,11 @@
 
 /**
  * @brief Implementazione di IAccelerator che gestisce l'offloading su GPU.
+ *
+ * La pipeline interna è composta da due thread:
+ * - Thread Producer (stadi 1 e 2): send_data_to_device() e
+ * execute_kernel().
+ * - Thread Consumer (stadio 3): get_results_blocking().
  */
 class GpuAccelerator : public IAccelerator {
  public:
@@ -25,8 +30,8 @@ class GpuAccelerator : public IAccelerator {
    // Implementazione dei metodi di IAccelerator.
    size_t acquire_buffer_set() override;
    void release_buffer_set(size_t index) override;
-   void send_data_async(void *task_context) override;
-   void execute_kernel_async(void *task_context) override;
+   void send_data_to_device(void *task_context) override;
+   void execute_kernel(void *task_context) override;
    void get_results_blocking(void *task_context,
                              long long &computed_ns) override;
 

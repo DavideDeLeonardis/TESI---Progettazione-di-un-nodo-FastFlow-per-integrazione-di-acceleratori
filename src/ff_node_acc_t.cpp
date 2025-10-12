@@ -96,8 +96,8 @@ void ff_node_acc_t::producerLoop() {
 
       // Acquisisce un buffer set, invia i dati sul device e avvia il kernel.
       task->buffer_idx = accelerator_->acquire_buffer_set();
-      accelerator_->send_data_async(task);
-      accelerator_->execute_kernel_async(task);
+      accelerator_->send_data_to_device(task);
+      accelerator_->execute_kernel(task);
 
       readyQ_.push(task);
    }

@@ -6,9 +6,10 @@
  * @brief Interfaccia per un acceleratore hardware (es. GPU, FPGA).
  *
  * Definisce le funzioni per ottenere e rilasciare i buffer, e le 3 funzioni
- * principali che implementano i due thread della pipeline:
- * - Thread Producer (stadi 1 e 2): send_data_async() e execute_kernel_async()
- * - Thread Consumer (stadio 3): get_results_blocking()
+ * principali che implementano i due thread della pipeline interna:
+ * - Thread Producer (stadi 1 e 2): send_data_to_device() e
+ * execute_kernel().
+ * - Thread Consumer (stadio 3): get_results_blocking().
  */
 class IAccelerator {
  public:
@@ -35,7 +36,7 @@ class IAccelerator {
     * @param task_context Puntatore a un oggetto Task che contiene i dati e lo
     * stato (incluso l'indice del buffer da usare).
     */
-   virtual void send_data_async(void *task_context) = 0;
+   virtual void send_data_to_device(void *task_context) = 0;
 
    /**
     * @brief Stadio 2 - Execute: Accoda l'esecuzione del kernel sul device.
@@ -43,7 +44,7 @@ class IAccelerator {
     * @param task_context Puntatore a un oggetto Task che contiene lo stato,
     * incluso l'evento di dipendenza.
     */
-   virtual void execute_kernel_async(void *task_context) = 0;
+   virtual void execute_kernel(void *task_context) = 0;
 
    /**
     * @brief Stadio 3 - Download: Attende il completamento di tutte le

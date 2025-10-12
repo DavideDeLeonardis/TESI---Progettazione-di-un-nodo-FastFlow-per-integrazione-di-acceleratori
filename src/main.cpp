@@ -14,7 +14,7 @@
 /**
  * @brief Nodo sorgente della pipeline FastFlow.
  *
- * Emitter genera i Task da processare.
+ * Il nodo Emitter genera i Task da far processare al nodo ff_node_acc_t.
  * Inizializza i dati di input una sola volta, poi crea dinamicamente un nuovo
  * oggetto Task per ogni richiesta dalla pipeline.
  */
@@ -66,11 +66,12 @@ class Emitter : public ff_node {
 
 /**
  * @brief Orchestra l'intera pipeline FastFlow per l'offloading su un
- * acceleratore. Crea il nodo sorgente (Emitter) che genera i task. Seleziona,
- * crea e inizializza l'oggetto acceleratore corretto. Imposta la pipeline
- * FastFlow a 2 stadi (Emitter -> ff_node_acc_t). Avvia la pipeline, misura
- * il tempo totale di esecuzione (elapsed). Raccoglie i risultati finali, come
- * il tempo di calcolo puro (computed) e il numero di task completati.
+ * acceleratore.
+ * Crea i due nodi della pipeline FF (Emitter, ff_node_acc_t).
+ * Seleziona, crea e inizializza l'acceleratore corretto.
+ * Avvia la pipeline.
+ * Misura e raccoglie i tempi di esecuzione (computed ed elapsed) e il numero di
+ * task completati.
  */
 void runAcceleratorPipeline(size_t N, size_t NUM_TASKS,
                             const std::string &device_type,
@@ -121,41 +122,19 @@ void runAcceleratorPipeline(size_t N, size_t NUM_TASKS,
 }
 
 int main(int argc, char *argv[]) {
-   // ------ Parsing degli argomenti della riga di comando ------
+   // Parametri della command line di default.
    size_t N = 1000000, NUM_TASKS = 50;
    std::string device_type = "cpu";
 
-   if (argc > 1 &&
-       (std::string(argv[1]) == "-h" || std::string(argv[1]) == "--help")) {
-      print_usage(argv[0]);
-      return 0;
-   }
+   long long ns_elapsed = 0;  // Tempo totale (host) per completare tutti i task
+   long long ns_computed = 0; // Tempo totale di calcolo (device)
+   size_t final_count = 0;    // Numero totale di task effettivamente completati
 
-   try {
-      if (argc > 1)
-         N = std::stoull(argv[1]);
-      if (argc > 2)
-         NUM_TASKS = std::stoull(argv[2]);
-      if (argc > 3)
-         device_type = argv[3];
-   } catch (const std::invalid_argument &e) {
-      std::cerr << "[ERROR] Invalid numeric argument provided.\n\n";
-      print_usage(argv[0]);
-      return -1;
-   }
-
-   if (N == 0) {
-      std::cerr << "[FATAL] La dimensione dei vettori (N) non può essere 0.\n";
-      return EXIT_FAILURE;
-   }
-   // /----- Parsing degli argomenti della riga di comando ------
+   // Parsing degli argomenti della command line.
+   parse_args(argc, argv, N, NUM_TASKS, device_type);
 
    std::cout << "\nConfiguration: N=" << N << ", NUM_TASKS=" << NUM_TASKS
              << ", Device=" << device_type << "\n\n";
-
-   long long ns_elapsed = 0;
-   long long ns_computed = 0;
-   size_t final_count = 0;
 
    // In base al device scelto, esegue la parallelizzazione dei task su CPU
    // multicore o la pipeline con offloading su GPU/FPGA.

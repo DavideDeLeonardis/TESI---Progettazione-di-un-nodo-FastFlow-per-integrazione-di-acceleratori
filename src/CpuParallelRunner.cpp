@@ -34,7 +34,7 @@ long long executeCpuParallelTasks(size_t N, size_t NUM_TASKS) {
                 << " finished.\n";
    }
 
+   // Calcola il tempo totale di esecuzione e lo ritorna.
    auto t1 = std::chrono::steady_clock::now();
-   // Return il tempo totale trascorso in nanosecondi
    return std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
 }

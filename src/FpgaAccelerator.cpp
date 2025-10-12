@@ -200,7 +200,7 @@ void FpgaAccelerator::release_buffer_set(size_t index) {
  * dall'ultima operazione, garantendo che lo stadio successivo attenda il
  * completamento di entrambi i trasferimenti.
  */
-void FpgaAccelerator::send_data_async(void *task_context) {
+void FpgaAccelerator::send_data_to_device(void *task_context) {
    cl_int ret; // Codice di ritorno delle chiamate OpenCL
    auto *task = static_cast<Task *>(task_context);
    BufferSet &current_buffers = buffer_pool_[task->buffer_idx];
@@ -232,7 +232,7 @@ void FpgaAccelerator::send_data_async(void *task_context) {
  * l'evento del completamento del trasferimento dati e ottenendo un nuovo evento
  * che rappresenta il completamento del kernel.
  */
-void FpgaAccelerator::execute_kernel_async(void *task_context) {
+void FpgaAccelerator::execute_kernel(void *task_context) {
    cl_int ret; // Codice di ritorno delle chiamate OpenCL.
    auto *task = static_cast<Task *>(task_context);
    BufferSet &current_buffers = buffer_pool_[task->buffer_idx];

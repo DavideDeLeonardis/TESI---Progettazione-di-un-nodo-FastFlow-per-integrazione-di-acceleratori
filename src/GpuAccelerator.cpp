@@ -211,7 +211,7 @@ void GpuAccelerator::release_buffer_set(size_t index) {
  * completamento di entrambi i trasferimenti.
  *
  */
-void GpuAccelerator::send_data_async(void *task_context) {
+void GpuAccelerator::send_data_to_device(void *task_context) {
    cl_int ret; // Codice di ritorno delle chiamate OpenCL
    auto *task = static_cast<Task *>(task_context);
    BufferSet &current_buffers = buffer_pool_[task->buffer_idx];
@@ -243,7 +243,7 @@ void GpuAccelerator::send_data_async(void *task_context) {
  * l'evento del completamento del trasferimento dati e ottenendo un nuovo evento
  * che rappresenta il completamento del kernel.
  */
-void GpuAccelerator::execute_kernel_async(void *task_context) {
+void GpuAccelerator::execute_kernel(void *task_context) {
    cl_int ret; // Codice di ritorno delle chiamate OpenCL.
    auto *task = static_cast<Task *>(task_context);
    BufferSet &current_buffers = buffer_pool_[task->buffer_idx];
