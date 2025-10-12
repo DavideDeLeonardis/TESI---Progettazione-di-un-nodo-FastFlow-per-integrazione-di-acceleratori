@@ -273,11 +273,11 @@ Il Parallelismo Reale: Mentre la GPU sta eseguendo il calcolo per il Task N, la 
 
 
 Perché Non è Stata Usata una Pipeline FastFlow Interna?
-Sebbene in teoria sembri più elegante annidare una ff_Pipe all'interno del ff_node_acc_t, in pratica questa soluzione è inferiore e più complessa per questo specifico problema, a causa della gestione dello stato condiviso.
+Sebbene in teoria sembri più elegante annidare una ff_Pipe all'interno del ff_node_acc_t, questa soluzione è inferiore e più complessa a causa della gestione dello stato condiviso.
 L'operazione di offloading richiede che lo stato di un singolo task (come l'indice del buffer buffer_idx e gli eventi OpenCL per la sincronizzazione) sia mantenuto e passato coerentemente tra gli stadi di Upload, Launch e Download.
 Se avessimo usato tre nodi FastFlow separati (UploaderNode, LauncherNode, DownloaderNode), avremmo dovuto implementare complessi meccanismi di sincronizzazione esterni (ad esempio, mappe globali protette da mutex) per condividere l'oggetto accelerator e per associare lo stato corretto a ogni task che fluisce attraverso nodi indipendenti. 
 Questo avrebbe reso il codice più difficile da leggere, più prono a errori (race condition) e avrebbe reintrodotto la complessità che il framework dovrebbe nascondere.
 L'architettura attuale, con una pipeline manuale incapsulata, è superiore perché:
 Incapsula lo Stato: Il ff_node_acc_t "possiede" l'acceleratore e tutte le sue risorse (come il pool di buffer). Tutta la logica e lo stato sono confinati in un unico componente, rendendo il design più pulito e sicuro.
-Semplifica la Logica: La comunicazione tra i thread interni è triviale, poiché condividono lo stato dello stesso oggetto.
+Semplifica la Logica: La comunicazione tra i thread interni è banale, poiché condividono lo stato dello stesso oggetto.
 
