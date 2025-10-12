@@ -8,10 +8,6 @@
  * 1. Producer (Uploader+Launcher): Trasferisce i dati dall'host al device e
  *    avvia l'esecuzione del kernel.
  * 2. Consumer (Downloader): Trasferisce i risultati dal device all'host.
- *
- * Permette di sovrapporre le operazioni di I/O con il calcolo, nella pipeline
- * il task 'n' è in esecuzione, mentre i dati per 'n+1' vengono caricati e i
- * risultati di 'n-1' vengono scaricati.
  */
 
 // Sentinella usata per segnalare la fine dello stream di dati alla pipeline
