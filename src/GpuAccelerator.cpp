@@ -87,7 +87,7 @@ bool GpuAccelerator::initialize() {
    }
 
    // Legge il kernel OpenCL.
-   std::ifstream kernelFile("kernel/vecAdd.cl");
+   std::ifstream kernelFile("kernels/vecAdd.cl");
    if (!kernelFile.is_open()) {
       std::cerr
          << "[ERROR] GpuAccelerator: Could not open kernel file vecAdd.cl\n";
