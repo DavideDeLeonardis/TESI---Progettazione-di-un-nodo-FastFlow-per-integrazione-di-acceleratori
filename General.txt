@@ -281,3 +281,17 @@ L'architettura attuale, con una pipeline manuale incapsulata in ff_node_acc_t, �
    Incapsula lo Stato: Il ff_node_acc_t "possiede" l'acceleratore e tutte le sue risorse (come il pool di buffer). Tutta la logica e lo stato sono confinati in un unico componente.
    Semplifica la Logica: La comunicazione tra i thread interni è banale, poiché condividono lo stato dello stesso oggetto.
 
+
+
+
+
+// ff::ParallelFor
+"CPU multicore": Lo scopo di ff::ParallelFor è proprio quello di distribuire il lavoro di un ciclo for su tutti i core disponibili della sua CPU. 
+   Se ha 8 core, FastFlow creerà una squadra di 8 thread (o un numero ottimale) per eseguire il calcolo.
+
+"thread": 
+   ff::ParallelFor è un'astrazione di alto livello che, sotto il cofano, crea e gestisce un pool di thread per parallelizzare il lavoro.
+
+"shared memory": 
+   Questa è la parte più importante. Quando usa ff::ParallelFor, tutti i thread lavorano sugli stessi vettori a, b e c che si trovano nella RAM principale del suo computer. 
+   Non ci sono copie di dati verso una memoria separata (come avviene per la GPU/FPGA). Tutti i thread "vedono" e "condividono" la stessa area di memoria. Questo è il modello di parallelismo a memoria condivisa.
