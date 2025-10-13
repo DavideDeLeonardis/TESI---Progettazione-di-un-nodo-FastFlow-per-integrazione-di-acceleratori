@@ -13,8 +13,7 @@
 /**
  * @brief Nodo FastFlow che orchestra l'offloading su un acceleratore.
  *
- * Implementa una pipeline interna a 2 stadi (Producer, Consumer) gestita da 2
- * thread:
+ * Implementa una pipeline interna a 2 stadi gestita da 2 thread:
  * 1. Producer (Uploader+Launcher): Trasferisce i dati dall'host al device e
  *   avvia l'esecuzione del kernel.
  * 2. Consumer (Downloader): Trasferisce i risultati dal device all'host.
