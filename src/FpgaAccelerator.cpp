@@ -52,6 +52,12 @@ FpgaAccelerator::~FpgaAccelerator() {
    std::cerr << "[FpgaAccelerator] Destroyed and OpenCL resources released.\n";
 }
 
+/**
+ * @brief Esegue tutte le operazioni di setup una volta sola. Trova il
+ * dispositivo, crea il contesto, la coda di comandi, legge il sorgente del
+ * kernel, lo compila e prepara l'oggetto kernel, inizializza il pool di buffer
+ * e la coda degli indici liberi.
+ */
 bool FpgaAccelerator::initialize() {
    cl_int ret; // Codice di ritorno delle chiamate OpenCL.
    cl_platform_id platform_id = NULL;
@@ -265,10 +271,10 @@ void FpgaAccelerator::execute_kernel(void *task_context) {
  * @brief Stadio 3 (Download).
  * Punto di sincronizzaione. Recupera i risultati dalla device memory alla
  * memoria host, aspettando che l'upload e l'esecuzione del kernel siano
- * completati.
+ * completati. È l'unica funzione bloccante della pipeline.
  */
-void FpgaAccelerator::get_results_blocking(void *task_context,
-                                           long long &computed_ns) {
+void FpgaAccelerator::get_results_from_device(void *task_context,
+                                              long long &computed_ns) {
    cl_int ret;
    auto *task = static_cast<Task *>(task_context);
    size_t required_size_bytes = sizeof(int) * task->n;

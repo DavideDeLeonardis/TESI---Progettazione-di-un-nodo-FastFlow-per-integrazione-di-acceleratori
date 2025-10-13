@@ -117,7 +117,7 @@ void ff_node_acc_t::consumerLoop() {
       long long current_task_ns = 0;
 
       // Attende il completamento del kernel e scarica i risultati sull'host.
-      accelerator_->get_results_blocking(task, current_task_ns);
+      accelerator_->get_results_from_device(task, current_task_ns);
 
       // Aggiorna le statistiche sull'oggetto esterno.
       stats_->computed_ns += current_task_ns;

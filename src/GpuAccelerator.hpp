@@ -15,26 +15,30 @@
 /**
  * @brief Implementazione di IAccelerator che gestisce l'offloading su GPU.
  *
- * La pipeline interna è composta da due thread:
- * - Thread Producer (stadi 1 e 2): send_data_to_device() e
- * execute_kernel().
- * - Thread Consumer (stadio 3): get_results_blocking().
+ * La pipeline interna al nodo ff_node_acc_t è composta da 2 thread:
+ * - Il thread Producer esegue gli stadi di Upload e Execute, utilizzando le
+ * funzioni qui dichiarate send_data_to_device() e execute_kernel().
+ * - Il thread Consumer esegue lo stadio di Download, utilizzando la
+ * funzione qui dichiarata get_results_from_device().
  */
 class GpuAccelerator : public IAccelerator {
  public:
    GpuAccelerator();
    ~GpuAccelerator() override;
 
-   // Esegue tutte le operazioni di setup una volta sola.
+   // Esegue tutte le operazioni di setup una volta sola (creare contesto,
+   // coda comandi, compilare kernel, inizializzare pool buffer).
    bool initialize() override;
 
-   // Implementazione dei metodi di IAccelerator.
+   // Metodi per l'acquisizione e il rilascio dei buffer.
    size_t acquire_buffer_set() override;
    void release_buffer_set(size_t index) override;
+
+   // Metoodi utili per i thread della pipeline interna.
    void send_data_to_device(void *task_context) override;
    void execute_kernel(void *task_context) override;
-   void get_results_blocking(void *task_context,
-                             long long &computed_ns) override;
+   void get_results_from_device(void *task_context,
+                                long long &computed_ns) override;
 
  private:
    cl_context context_{nullptr};     // Il contesto OpenCL

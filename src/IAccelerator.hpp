@@ -9,7 +9,7 @@
  * principali che implementano i due thread della pipeline interna:
  * - Thread Producer (stadi 1 e 2): send_data_to_device() e
  * execute_kernel().
- * - Thread Consumer (stadio 3): get_results_blocking().
+ * - Thread Consumer (stadio 3): get_results_from_device().
  *
  * ! TODO: Eliminare duplicazione estrema in FpgaAccelerator e GpuAccelerator.
  * ! TODO: Eliminare i nomi hardcoded dei kernel (.xclbin, .cl).
@@ -58,6 +58,6 @@ class IAccelerator {
     * @param task_context Puntatore a un oggetto Task.
     * @param computed_ns Tempo di calcolo effettivo.
     */
-   virtual void get_results_blocking(void *task_context,
-                                     long long &computed_ns) = 0;
+   virtual void get_results_from_device(void *task_context,
+                                        long long &computed_ns) = 0;
 };
