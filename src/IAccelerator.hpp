@@ -12,6 +12,7 @@
  * - Thread Consumer (stadio 3): get_results_blocking().
  *
  * ! TODO: Eliminare duplicazione estrema in FpgaAccelerator e GpuAccelerator.
+ * ! TODO: Eliminare i nomi hardcoded dei kernel (.xclbin, .cl).
  */
 class IAccelerator {
  public:
