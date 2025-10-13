@@ -10,6 +10,8 @@
  * - Thread Producer (stadi 1 e 2): send_data_to_device() e
  * execute_kernel().
  * - Thread Consumer (stadio 3): get_results_blocking().
+ *
+ * ! TODO: Eliminare duplicazione estrema in FpgaAccelerator e GpuAccelerator.
  */
 class IAccelerator {
  public:
