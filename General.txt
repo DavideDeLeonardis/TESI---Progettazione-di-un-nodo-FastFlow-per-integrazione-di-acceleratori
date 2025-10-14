@@ -69,7 +69,11 @@ Punti chiave da ricordare:
    v++ -c -k krnl_vadd --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw -o kernels/krnl_vadd.xo kernels/krnl_vadd.cpp
    v++ -l --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw -o krnl_vadd.xclbin kernels/krnl_vadd.xo
 
-// COMPILAZIONE E LINKING SU FPGA se voglio usare SW EMULATION per ottenere xclbin (in dir Tesi) + EXEC
+   Linking con profiling per vitis_analyzer (vitis_analyzer --classic xrt.run_summary):
+      v++ -l --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw --profile.data all:all:all -o krnl_vadd.xclbin kernels/krnl_vadd.xo
+
+
+// COMPILAZIONE E LINKING SU FPGA se voglio usare SOFTWARE EMULATION per ottenere xclbin (in dir Tesi) + EXEC
    v++ -c -k krnl_vadd --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target sw_emu -o kernels/krnl_vadd.sw_emu.xo kernels/krnl_vadd.cpp
    v++ -l --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target sw_emu -o krnl_vadd.sw_emu.xclbin kernels/krnl_vadd.sw_emu.xo
 
@@ -77,7 +81,7 @@ Punti chiave da ricordare:
    Modifica nome .xclbin in FpgaAccelerator in kernels/krnl_vadd.sw_emu.xclbin
    rm -rf build; cmake -B build && cmake --build build && ./build/tesi-exec 1000000 7 fpga
 
-// Se voglio usare HW EMULATION su FPGA (in dir Tesi) ----> VITIS ANALYZER       (Usa N piccoli)
+// COMPILAZIONE E LINKING SU FPGA se voglio usare HARDWARE EMULATION per ottenere xclbin (in dir Tesi) ----> e poi voglio usare VITIS ANALYZER       (Usa N piccoli)
    v++ -c -k krnl_vadd --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw_emu -o kernels/krnl_vadd.hw_emu.xo kernels/krnl_vadd.cpp
    v++ -l --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw_emu --vivado.prop "run.my_run.is_locked=false" -o krnl_vadd.hw_emu.xclbin kernels/krnl_vadd.hw_emu.xo
       ERRORS:
@@ -138,6 +142,12 @@ Avvia sessione:
 Resume sessione:
    screen -r vitis   
 
+See sessions:
+   screen -ls
+
+Delete session:
+   screen -X -S [session # you want to kill] kill
+   
 Per ritornare in terminale da sessione:
    ctrl-a
    d
@@ -318,3 +328,11 @@ L'architettura attuale, con una pipeline manuale incapsulata in ff_node_acc_t, �
 "shared memory": 
    Questa è la parte più importante. Quando usa ff::ParallelFor, tutti i thread lavorano sugli stessi vettori a, b e c che si trovano nella RAM principale del suo computer. 
    Non ci sono copie di dati verso una memoria separata (come avviene per la GPU/FPGA). Tutti i thread "vedono" e "condividono" la stessa area di memoria. Questo è il modello di parallelismo a memoria condivisa.
+
+
+
+
+
+
+Durante lo sviluppo, è emersa un'incompatibilità di versione tra la piattaforma Xilinx (2022.x) e gli strumenti Vitis utilizzati (2023.x), che ha impedito il completamento della fase di emulazione hardware (hw_emu). 
+La verifica funzionale è stata completata con successo tramite emulazione software (sw_emu) e la validazione finale delle performance è stata eseguita direttamente sull'hardware fisico.
