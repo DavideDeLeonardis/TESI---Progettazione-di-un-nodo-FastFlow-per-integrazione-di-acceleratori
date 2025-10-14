@@ -148,10 +148,10 @@ int main(int argc, char *argv[]) {
       ns_computed = ns_elapsed;
       final_count = NUM_TASKS;
 
-   } else if (device_type == "gpu" || device_type == "fpga")
+   } else if (device_type == "gpu" || device_type == "fpga") {
       runAcceleratorPipeline(N, NUM_TASKS, device_type, ns_elapsed, ns_computed,
                              final_count);
-   else {
+   } else {
       std::cerr << "[ERROR] Invalid device type '" << device_type << "'.\n\n";
       print_usage(argv[0]);
       return -1;
