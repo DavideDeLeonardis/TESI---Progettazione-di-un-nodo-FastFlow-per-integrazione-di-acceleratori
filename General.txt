@@ -64,9 +64,30 @@ Punti chiave da ricordare:
    rsync -av --exclude={'build/','.DS_Store','.git/','.vscode/','General/','General.txt'} /Users/davidedeleonardis/Desktop/Tesi/ deleonardis@131.114.3.250:~/Tesi/
 
 
-// COMPILAZIONE E LINKING SU FPGA per ottenere xclbin (in Tesi)
-v++ -c -k krnl_vadd --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw -o kernels/krnl_vadd.xo kernels/krnl_vadd.cpp
-v++ -l --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw -o krnl_vadd.xclbin kernels/krnl_vadd.xo
+// COMPILAZIONE E LINKING SU FPGA per ottenere xclbin (in dir Tesi)
+   unset XCL_EMULATION_MODE
+   v++ -c -k krnl_vadd --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw -o kernels/krnl_vadd.xo kernels/krnl_vadd.cpp
+   v++ -l --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw -o krnl_vadd.xclbin kernels/krnl_vadd.xo
+
+// Se voglio usare SW EMULATION su FPGA (in dir Tesi)
+   v++ -c -k krnl_vadd --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target sw_emu -o kernels/krnl_vadd.sw_emu.xo kernels/krnl_vadd.cpp
+   v++ -l --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target sw_emu -o krnl_vadd.sw_emu.xclbin kernels/krnl_vadd.sw_emu.xo
+   export XCL_EMULATION_MODE=sw_emu
+   Modifica nome .xclbin in FpgaAccelerator in kernels/krnl_vadd.sw_emu.xclbin
+   rm -rf build; cmake -B build && cmake --build build && ./build/tesi-exec 1000000 7 fpga
+
+// Se voglio usare HW EMULATION su FPGA (in dir Tesi) ----> VITIS ANALYZER       Usa N piccoli
+   v++ -c -k krnl_vadd --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw_emu -o kernels/krnl_vadd.hw_emu.xo kernels/krnl_vadd.cpp
+   v++ -l --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw_emu --vivado.prop "run.my_run.is_locked=false" -o krnl_vadd.hw_emu.xclbin kernels/krnl_vadd.hw_emu.xo
+      ERRORS:
+         "IP ... is locked": Un componente hardware pre-costruito della sua piattaforma (pfm_top...) è "bloccato".
+         "customized with software release 2022.1": Questo componente è stato creato e testato con la versione 2022.1 degli strumenti Xilinx.
+         "has a different revision in the IP Catalog": La versione degli strumenti Vitis/Vivado che sta usando attualmente (probabilmente una più recente come la 2023.x) ha una versione più nuova di quel componente.
+   export XCL_EMULATION_MODE=hw_emu
+   Modifica nome .xclbin in FpgaAccelerator in kernels/krnl_vadd.hw_emu.xclbin
+   rm -rf build; cmake -B build && cmake --build build && ./build/tesi-exec 1000000 7 fpga
+   vitis_analyzer xrt.run_summary
+
 
 
 
