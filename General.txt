@@ -69,14 +69,15 @@ Punti chiave da ricordare:
    v++ -c -k krnl_vadd --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw -o kernels/krnl_vadd.xo kernels/krnl_vadd.cpp
    v++ -l --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw -o krnl_vadd.xclbin kernels/krnl_vadd.xo
 
-// Se voglio usare SW EMULATION su FPGA (in dir Tesi)
+// COMPILAZIONE E LINKING SU FPGA se voglio usare SW EMULATION per ottenere xclbin (in dir Tesi) + EXEC
    v++ -c -k krnl_vadd --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target sw_emu -o kernels/krnl_vadd.sw_emu.xo kernels/krnl_vadd.cpp
    v++ -l --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target sw_emu -o krnl_vadd.sw_emu.xclbin kernels/krnl_vadd.sw_emu.xo
+
    export XCL_EMULATION_MODE=sw_emu
    Modifica nome .xclbin in FpgaAccelerator in kernels/krnl_vadd.sw_emu.xclbin
    rm -rf build; cmake -B build && cmake --build build && ./build/tesi-exec 1000000 7 fpga
 
-// Se voglio usare HW EMULATION su FPGA (in dir Tesi) ----> VITIS ANALYZER       Usa N piccoli
+// Se voglio usare HW EMULATION su FPGA (in dir Tesi) ----> VITIS ANALYZER       (Usa N piccoli)
    v++ -c -k krnl_vadd --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw_emu -o kernels/krnl_vadd.hw_emu.xo kernels/krnl_vadd.cpp
    v++ -l --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw_emu --vivado.prop "run.my_run.is_locked=false" -o krnl_vadd.hw_emu.xclbin kernels/krnl_vadd.hw_emu.xo
       ERRORS:
