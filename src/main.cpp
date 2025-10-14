@@ -38,7 +38,6 @@ class Emitter : public ff_node {
          b[i] = int(2 * i);
       }
 
-      // Salvataggio dei ptr ai dati di input/output e della dim dei vettori.
       a_ptr_ = a.data();
       b_ptr_ = b.data();
       c_ptr_ = c.data();
@@ -125,7 +124,7 @@ void runAcceleratorPipeline(size_t N, size_t NUM_TASKS,
 }
 
 int main(int argc, char *argv[]) {
-   // Parametri della command line di default.
+   // Parametri di default della command line.
    size_t N = 1000000, NUM_TASKS = 50;
    std::string device_type = "cpu";
 
