@@ -10,7 +10,7 @@ FastFlow:
 Parte di colloquio con l'acceleratore vedi VITIS XILINX:
 	https://docs.amd.com/r/en-US/Vitis-Tutorials-Getting-Started/Vitis-Introduction-and-Getting-Started
 
-Per usarla con GPU
+Per usarla con GPU (OpenCL)
     https://eunomia.dev/en/others/cuda-tutorial/15-opencl-vector-addition/
 
 L'account è deleonardis, la macchina è
