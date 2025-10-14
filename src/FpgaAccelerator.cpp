@@ -88,7 +88,7 @@ bool FpgaAccelerator::initialize() {
    }
 
    // Caricamento del file binario dell'FPGA (.xclbin).
-   std::ifstream binaryFile("krnl_vadd.xclbin", std::ios::binary);
+   std::ifstream binaryFile("kernels/krnl_vadd.xclbin", std::ios::binary);
    if (!binaryFile.is_open()) {
       std::cerr << "[ERROR] FpgaAccelerator: Could not open kernel file "
                    "krnl_vadd.xclbin.\n";
