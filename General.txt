@@ -69,11 +69,11 @@ Punti chiave da ricordare:
    v++ -c -k krnl_vadd --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw -o kernels/krnl_vadd.xo kernels/krnl_vadd.cpp
    v++ -l --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw -o krnl_vadd.xclbin kernels/krnl_vadd.xo
 
-   NON FUNZIONANTE ---- Linking con profiling per vitis_analyzer (vitis_analyzer --classic xrt.run_summary) --- NON CREA IL FILE xrt.run_summary
+   NON CREA IL FILE xrt.run_summary ---- Linking con profiling per vitis_analyzer (vitis_analyzer --classic xrt.run_summary)
       v++ -l --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw --profile.data all:all:all -o krnl_vadd.xclbin kernels/krnl_vadd.xo
 
 
-// COMPILAZIONE E LINKING SU FPGA se voglio usare SOFTWARE EMULATION per ottenere xclbin (in dir Tesi) + EXEC
+// COMPILAZIONE E LINKING SU FPGA se voglio usare SOFTWARE EMULATION per ottenere xclbin (in dir Tesi) + EXEC --------> OK!
    v++ -c -k krnl_vadd --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target sw_emu -o kernels/krnl_vadd.sw_emu.xo kernels/krnl_vadd.cpp
    v++ -l --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target sw_emu -o krnl_vadd.sw_emu.xclbin kernels/krnl_vadd.sw_emu.xo
 
@@ -81,7 +81,7 @@ Punti chiave da ricordare:
    Modifica nome .xclbin in FpgaAccelerator in kernels/krnl_vadd.sw_emu.xclbin
    rm -rf build; cmake -B build && cmake --build build && ./build/tesi-exec 1000000 7 fpga
 
-// COMPILAZIONE E LINKING SU FPGA se voglio usare HARDWARE EMULATION per ottenere xclbin (in dir Tesi) ----> e poi voglio usare VITIS ANALYZER       (Usa N piccoli)
+// COMPILAZIONE E LINKING SU FPGA se voglio usare HARDWARE EMULATION per ottenere xclbin (in dir Tesi) ----> e poi voglio usare VITIS ANALYZER       (Usa N piccoli)    ----> NON FUNZIONA!
    v++ -c -k krnl_vadd --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw_emu -o kernels/krnl_vadd.hw_emu.xo kernels/krnl_vadd.cpp
    v++ -l --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw_emu --vivado.prop "run.my_run.is_locked=false" -o krnl_vadd.hw_emu.xclbin kernels/krnl_vadd.hw_emu.xo
       ERRORS:
