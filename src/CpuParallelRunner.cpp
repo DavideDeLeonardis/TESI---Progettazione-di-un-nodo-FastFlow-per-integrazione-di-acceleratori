@@ -7,7 +7,8 @@
  * @brief Esegue i task di somma vettoriale in parallelo su tutti i core
  * della CPU utilizzando FastFlow.
  */
-long long executeCpuParallelTasks(size_t N, size_t NUM_TASKS) {
+long long executeCpuParallelTasks(size_t N, size_t NUM_TASKS,
+                                  size_t &tasks_completed) {
    std::cout << "[CPU Parallel] Running tasks in PARALLEL on CPU.\n\n";
 
    // Inizializzazione dei dati.
@@ -18,7 +19,7 @@ long long executeCpuParallelTasks(size_t N, size_t NUM_TASKS) {
    }
 
    ParallelFor pf;
-
+   tasks_completed = 0;
    auto t0 = std::chrono::steady_clock::now();
 
    // Esegue NUM_TASKS volte il calcolo parallelo.
@@ -32,6 +33,8 @@ long long executeCpuParallelTasks(size_t N, size_t NUM_TASKS) {
 
       std::cerr << "[CPU Parallel - END] Task " << task_num + 1
                 << " finished.\n";
+
+      tasks_completed++;
    }
 
    // Calcola il tempo totale di esecuzione e lo ritorna.
