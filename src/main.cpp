@@ -68,12 +68,10 @@ class Emitter : public ff_node {
 
 /**
  * @brief Orchestra l'intera pipeline FastFlow per l'offloading su un
- * acceleratore.
- * Crea i due nodi della pipeline FF (Emitter, ff_node_acc_t).
- * Riceve l'acceleratore già inizializzato.
- * Avvia la pipeline.
- * Misura e raccoglie i tempi di esecuzione (computed ed elapsed) e il numero di
- * task completati.
+ * acceleratore. Crea i due nodi della pipeline FF (Emitter, ff_node_acc_t).
+ * Riceve l'acceleratore già inizializzato. Avvia la pipeline. Misura e
+ * raccoglie i tempi di esecuzione (computed ed elapsed) e il numero di task
+ * completati.
  */
 void runAcceleratorPipeline(size_t N, size_t NUM_TASKS,
                             IAccelerator *accelerator, long long &ns_elapsed,
@@ -83,13 +81,11 @@ void runAcceleratorPipeline(size_t N, size_t NUM_TASKS,
    StatsCollector stats;
    std::future<size_t> count_future = stats.count_promise.get_future();
 
-   // Creazione dei due nodi della pipeline FF.
+   // Creazione della pipeline FF e dei suoi due nodi (Emitter, ff_node_acc_t),
+   // il cui secondo nodo incapsula una pipeline interna a 2 thread (producer,
+   // consumer).
    Emitter emitter(N, NUM_TASKS);
    ff_node_acc_t accNode(accelerator, &stats);
-
-   // Creazione della pipeline FF a 2 stadi (Emitter, ff_node_acc_t), il cui
-   // secondo stadio incapsula una pipeline interna a 2 thread (producer,
-   // consumer).
    ff_Pipe<> pipe(&emitter, &accNode);
 
    std::cout << "[Main] Starting FF pipeline execution...\n";
@@ -137,13 +133,11 @@ int main(int argc, char *argv[]) {
       ns_computed = ns_elapsed;
 
    } else if (device_type == "gpu") {
-      // Crea l'acceleratore e esegue la pipeline su GPU.
       auto accelerator = std::make_unique<GpuAccelerator>();
       runAcceleratorPipeline(N, NUM_TASKS, accelerator.get(), ns_elapsed,
                              ns_computed, final_count);
 
    } else if (device_type == "fpga") {
-      // Crea l'acceleratore e esegue la pipeline su FPGA.
       auto accelerator = std::make_unique<FpgaAccelerator>();
       runAcceleratorPipeline(N, NUM_TASKS, accelerator.get(), ns_elapsed,
                              ns_computed, final_count);
