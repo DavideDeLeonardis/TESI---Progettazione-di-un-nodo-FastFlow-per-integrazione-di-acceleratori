@@ -70,32 +70,22 @@ class Emitter : public ff_node {
  * @brief Orchestra l'intera pipeline FastFlow per l'offloading su un
  * acceleratore.
  * Crea i due nodi della pipeline FF (Emitter, ff_node_acc_t).
- * Seleziona, crea e inizializza l'acceleratore corretto.
+ * Riceve l'acceleratore già inizializzato.
  * Avvia la pipeline.
  * Misura e raccoglie i tempi di esecuzione (computed ed elapsed) e il numero di
  * task completati.
  */
 void runAcceleratorPipeline(size_t N, size_t NUM_TASKS,
-                            const std::string &device_type,
-                            long long &ns_elapsed, long long &ns_computed,
-                            size_t &final_count) {
-
-   // Creazione del nodo sorgente della pipeline FF.
-   Emitter emitter(N, NUM_TASKS);
-
-   // Selezione e creazione dell'acceleratore.
-   std::unique_ptr<IAccelerator> accelerator;
-   if (device_type == "fpga")
-      accelerator = std::make_unique<FpgaAccelerator>();
-   else if (device_type == "gpu")
-      accelerator = std::make_unique<GpuAccelerator>();
+                            IAccelerator *accelerator, long long &ns_elapsed,
+                            long long &ns_computed, size_t &final_count) {
 
    // Dati per ottenere il conteggio finale dei task processati.
    StatsCollector stats;
    std::future<size_t> count_future = stats.count_promise.get_future();
 
-   // Creazione del nodo di calcolo che usa l'acceleratore scelto.
-   ff_node_acc_t accNode(std::move(accelerator), &stats);
+   // Creazione dei due nodi della pipeline FF.
+   Emitter emitter(N, NUM_TASKS);
+   ff_node_acc_t accNode(accelerator, &stats);
 
    // Creazione della pipeline FF a 2 stadi (Emitter, ff_node_acc_t), il cui
    // secondo stadio incapsula una pipeline interna a 2 thread (producer,
@@ -141,15 +131,23 @@ int main(int argc, char *argv[]) {
    // In base al device scelto, esegue la parallelizzazione dei task su CPU
    // multicore o la pipeline con offloading su GPU/FPGA.
    if (device_type == "cpu") {
-      ns_elapsed = executeCpuParallelTasks(N, NUM_TASKS);
+      ns_elapsed = executeCpuParallelTasks(N, NUM_TASKS, final_count);
 
-      // Su CPU non c'è overhead di trasferimento, quindi elapsed = computed.
+      // Su CPU non c'è overhead di trasferimento dati --> computed = elapsed.
       ns_computed = ns_elapsed;
-      final_count = NUM_TASKS;
 
-   } else if (device_type == "gpu" || device_type == "fpga") {
-      runAcceleratorPipeline(N, NUM_TASKS, device_type, ns_elapsed, ns_computed,
-                             final_count);
+   } else if (device_type == "gpu") {
+      // Crea l'acceleratore e esegue la pipeline su GPU.
+      auto accelerator = std::make_unique<GpuAccelerator>();
+      runAcceleratorPipeline(N, NUM_TASKS, accelerator.get(), ns_elapsed,
+                             ns_computed, final_count);
+
+   } else if (device_type == "fpga") {
+      // Crea l'acceleratore e esegue la pipeline su FPGA.
+      auto accelerator = std::make_unique<FpgaAccelerator>();
+      runAcceleratorPipeline(N, NUM_TASKS, accelerator.get(), ns_elapsed,
+                             ns_computed, final_count);
+
    } else {
       std::cerr << "[ERROR] Invalid device type '" << device_type << "'.\n\n";
       print_usage(argv[0]);

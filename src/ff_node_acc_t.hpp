@@ -24,8 +24,7 @@
  */
 class ff_node_acc_t : public ff_node {
  public:
-   explicit ff_node_acc_t(std::unique_ptr<IAccelerator> acc,
-                          StatsCollector *stats);
+   explicit ff_node_acc_t(IAccelerator *acc, StatsCollector *stats);
    ~ff_node_acc_t() override;
 
  protected:
@@ -43,7 +42,7 @@ class ff_node_acc_t : public ff_node {
    void consumerLoop();
 
    // Puntatori all'acceleratore e all'oggetto per le statistiche.
-   std::unique_ptr<IAccelerator> accelerator_;
+   IAccelerator *accelerator_;
    StatsCollector *stats_;
 
    // Code per i task in ingresso dalla pipeline FF e per i task pronti per

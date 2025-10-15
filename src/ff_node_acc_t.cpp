@@ -21,9 +21,8 @@ void *const ff_node_acc_t::SENTINEL = &sentinel_obj;
  * @param acc Puntatore a un'implementazione di IAccelerator.
  * @param stats Puntatore all'oggetto per le statistiche finali.
  */
-ff_node_acc_t::ff_node_acc_t(std::unique_ptr<IAccelerator> acc,
-                             StatsCollector *stats)
-    : accelerator_(std::move(acc)), stats_(stats) {}
+ff_node_acc_t::ff_node_acc_t(IAccelerator *acc, StatsCollector *stats)
+    : accelerator_(acc), stats_(stats) {}
 
 ff_node_acc_t::~ff_node_acc_t() = default;
 
