@@ -25,8 +25,7 @@ FpgaAccelerator::FpgaAccelerator() {}
 
 /**
  * @brief Il distruttore si occupa di rilasciare in ordine inverso tutte le
- risorse OpenCL allocate, ovvero il kernel, il programma, la coda di
- comandi e il contesto. La pulizia dei buffer è gestita automaticamente dal
+ risorse OpenCL allocate. La pulizia dei buffer è gestita automaticamente dal
  distruttore di buffer_manager_.
  */
 FpgaAccelerator::~FpgaAccelerator() {
@@ -77,7 +76,7 @@ bool FpgaAccelerator::initialize() {
       return false;
    }
 
-   // Crea il BufferManager che iniializza il pool di buffer.
+   // Chiama il costruttore di BufferManager che iniializza il pool di buffer.
    buffer_manager_ = std::make_unique<BufferManager>(context_);
 
    // Caricamento del file binario dell'FPGA (.xclbin).
@@ -148,7 +147,7 @@ void FpgaAccelerator::send_data_to_device(void *task_context) {
    buffer_manager_->reallocate_buffers_if_needed(required_size_bytes);
    auto &current_buffers = buffer_manager_->get_buffer_set(task->buffer_idx);
 
-   // Scrivi i due input sulla device memory.
+   // Scrive i due input sulla device memory.
    OCL_CHECK(ret,
              clEnqueueWriteBuffer(queue_, current_buffers.bufferA, CL_FALSE, 0,
                                   required_size_bytes, task->a, 0, NULL, NULL),

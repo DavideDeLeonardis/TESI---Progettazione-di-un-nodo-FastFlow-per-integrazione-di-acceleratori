@@ -2,7 +2,6 @@
 
 #include "IAccelerator.hpp"
 #include "helpers/BufferManager.hpp"
-#include <memory>
 
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
