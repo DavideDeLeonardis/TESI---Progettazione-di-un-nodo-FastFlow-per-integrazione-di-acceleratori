@@ -133,12 +133,14 @@ int main(int argc, char *argv[]) {
       ns_computed = ns_elapsed;
 
    } else if (device_type == "gpu") {
-      auto accelerator = std::make_unique<GpuAccelerator>();
+      auto accelerator =
+         std::make_unique<GpuAccelerator>("kernels/vecAdd.cl", "vecAdd");
       runAcceleratorPipeline(N, NUM_TASKS, accelerator.get(), ns_elapsed,
                              ns_computed, final_count);
 
    } else if (device_type == "fpga") {
-      auto accelerator = std::make_unique<FpgaAccelerator>();
+      auto accelerator = std::make_unique<FpgaAccelerator>(
+         "kernels/krnl_vadd.xclbin", "krnl_vadd");
       runAcceleratorPipeline(N, NUM_TASKS, accelerator.get(), ns_elapsed,
                              ns_computed, final_count);
 
