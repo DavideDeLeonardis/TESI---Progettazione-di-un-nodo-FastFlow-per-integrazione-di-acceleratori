@@ -10,11 +10,11 @@ add_compile_definitions(FF_HEADER_ONLY NO_DEFAULT_MAPPING)
 
 add_executable(tesi-exec
     src/main.cpp
-    src/ff_node_acc_t.cpp
-    src/CpuParallelRunner.cpp
-    src/GpuAccelerator.cpp
-    src/FpgaAccelerator.cpp
-    src/helpers/BufferManager.cpp
+    src/cpu_runner/CpuParallelRunner.cpp
+    src/accelerator/ff_node_acc_t.cpp
+    src/accelerator/GpuAccelerator.cpp
+    src/accelerator/FpgaAccelerator.cpp
+    src/accelerator/BufferManager.cpp
     src/helpers/Helpers.cpp)
 
     

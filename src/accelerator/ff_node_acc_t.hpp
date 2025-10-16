@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../include/ff_includes.hpp"
+#include "../../include/ff_includes.hpp"
+#include "../common/BlockingQueue.hpp"
+#include "../common/StatsCollector.hpp"
+#include "../common/Task.hpp"
 #include "IAccelerator.hpp"
-#include "structs/BlockingQueue.hpp"
-#include "structs/StatsCollector.hpp"
-#include "structs/Task.hpp"
 #include <atomic>
 #include <future>
 #include <memory>

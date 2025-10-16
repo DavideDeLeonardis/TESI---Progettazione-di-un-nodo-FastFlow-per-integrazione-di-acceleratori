@@ -1,8 +1,8 @@
-#include "../include/ff_includes.hpp"
-#include "CpuParallelRunner.hpp"
-#include "FpgaAccelerator.hpp"
-#include "GpuAccelerator.hpp"
-#include "ff_node_acc_t.hpp"
+#include "../../include/ff_includes.hpp"
+#include "accelerator/FpgaAccelerator.hpp"
+#include "accelerator/GpuAccelerator.hpp"
+#include "accelerator/ff_node_acc_t.hpp"
+#include "cpu_runner/CpuParallelRunner.hpp"
 #include "helpers/Helpers.hpp"
 #include <chrono>
 #include <future>
@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
              << ", Device=" << device_type << "\n\n";
 
    // In base al device scelto, esegue la parallelizzazione dei task su CPU
-   // multicore o la pipeline con offloading su GPU/FPGA.
+   // multicore tramite ff o la pipeline con offloading su GPU/FPGA.
    if (device_type == "cpu") {
       ns_elapsed = executeCpuParallelTasks(N, NUM_TASKS, final_count);
 

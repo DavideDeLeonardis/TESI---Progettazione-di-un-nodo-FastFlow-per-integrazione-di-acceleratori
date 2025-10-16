@@ -1,7 +1,7 @@
 #pragma once
 
+#include "BufferManager.hpp"
 #include "IAccelerator.hpp"
-#include "helpers/BufferManager.hpp"
 
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
@@ -10,7 +10,7 @@
 #endif
 
 /**
- * @brief Implementazione di IAccelerator che gestisce l'offloading su FPGA.
+ * @brief Implementazione di IAccelerator che gestisce l'offloading su GPU.
  *
  * La pipeline interna al nodo ff_node_acc_t è composta da 2 thread:
  * - Il thread Producer esegue gli stadi di Upload e Execute, utilizzando le
@@ -18,10 +18,10 @@
  * - Il thread Consumer esegue lo stadio di Download, utilizzando la
  * funzione qui dichiarata get_results_from_device().
  */
-class FpgaAccelerator : public IAccelerator {
+class GpuAccelerator : public IAccelerator {
  public:
-   FpgaAccelerator();
-   ~FpgaAccelerator() override;
+   GpuAccelerator();
+   ~GpuAccelerator() override;
 
    // Esegue tutte le operazioni di setup una volta sola (creare contesto,
    // coda comandi, compilare kernel, inizializzare pool buffer).

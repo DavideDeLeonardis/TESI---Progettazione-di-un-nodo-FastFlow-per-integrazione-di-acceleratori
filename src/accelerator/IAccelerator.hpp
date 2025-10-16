@@ -1,6 +1,6 @@
 #pragma once
 
-#include "structs/Task.hpp"
+#include "../common/Task.hpp"
 
 /**
  * @brief Interfaccia per un acceleratore hardware (es. GPU, FPGA).
