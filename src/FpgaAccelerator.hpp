@@ -44,6 +44,7 @@ class FpgaAccelerator : public IAccelerator {
    cl_program program_{nullptr};     // Il programma OpenCL (kernel compilato)
    cl_kernel kernel_{nullptr};       // Il kernel OpenCL (func da eseguire)
 
-   // Logica di gestione del pool di buffer sul device.
+   // Incapsula la logica per l'acquisizione, il rilascio e la riallocazione dei
+   // buffer di memoria sul device.
    std::unique_ptr<BufferManager> buffer_manager_;
 };
