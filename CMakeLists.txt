@@ -14,6 +14,7 @@ add_executable(tesi-exec
     src/CpuParallelRunner.cpp
     src/GpuAccelerator.cpp
     src/FpgaAccelerator.cpp
+    src/helpers/BufferManager.cpp
     src/helpers/Helpers.cpp)
 
     
