@@ -25,21 +25,11 @@ FpgaAccelerator::FpgaAccelerator() {}
 
 /**
  * @brief Il distruttore si occupa di rilasciare in ordine inverso tutte le
- risorse OpenCL allocate, ovvero i buffer, il kernel, il programma, la coda di
- comandi e il contesto.
+ risorse OpenCL allocate, ovvero il kernel, il programma, la coda di
+ comandi e il contesto. La pulizia dei buffer è gestita automaticamente dal
+ distruttore di buffer_manager_.
  */
 FpgaAccelerator::~FpgaAccelerator() {
-   // Rilascia tutti i buffer di memoria nel pool.
-   for (auto &buffer_set : buffer_pool_) {
-      if (buffer_set.bufferA)
-         clReleaseMemObject(buffer_set.bufferA);
-      if (buffer_set.bufferB)
-         clReleaseMemObject(buffer_set.bufferB);
-      if (buffer_set.bufferC)
-         clReleaseMemObject(buffer_set.bufferC);
-   }
-
-   // Rilascia gli oggetti OpenCL.
    if (kernel_)
       clReleaseKernel(kernel_);
    if (program_)
@@ -87,6 +77,9 @@ bool FpgaAccelerator::initialize() {
       return false;
    }
 
+   // Crea il BufferManager che iniializza il pool di buffer.
+   buffer_manager_ = std::make_unique<BufferManager>(context_);
+
    // Caricamento del file binario dell'FPGA (.xclbin).
    std::ifstream binaryFile("kernels/krnl_vadd.xclbin", std::ios::binary);
    if (!binaryFile.is_open()) {
@@ -123,81 +116,16 @@ bool FpgaAccelerator::initialize() {
       return false;
    }
 
-   // Inizializza il pool di buffer.
-   buffer_pool_.resize(POOL_SIZE);
-   for (size_t i = 0; i < POOL_SIZE; ++i)
-      free_buffer_indices_.push(i);
-
    std::cerr << "[FpgaAccelerator] Initialization successful.\n";
    return true;
 }
 
-/**
- * @brief Helper per allocare o riallocare la memoria per tutti i buffer del
- * pool. Viene invocata al primo utilizzo o quando un task richiede una
- * dimensione di dati differente da quella corrente.
- */
-bool FpgaAccelerator::reallocate_buffers(size_t required_size_bytes) {
-   std::cerr << "  [FpgaAccelerator - DEBUG] Allocating pool buffers for "
-             << required_size_bytes << " bytes.\n";
-
-   // Rilascia eventuali buffer esistenti.
-   for (auto &buffer_set : buffer_pool_) {
-      if (buffer_set.bufferA)
-         clReleaseMemObject(buffer_set.bufferA);
-      if (buffer_set.bufferB)
-         clReleaseMemObject(buffer_set.bufferB);
-      if (buffer_set.bufferC)
-         clReleaseMemObject(buffer_set.bufferC);
-   }
-
-   // Alloca nuovi buffer.
-   cl_int ret;
-   for (size_t i = 0; i < POOL_SIZE; ++i) {
-      buffer_pool_[i].bufferA = clCreateBuffer(context_, CL_MEM_READ_ONLY,
-                                               required_size_bytes, NULL, &ret);
-      buffer_pool_[i].bufferB = clCreateBuffer(context_, CL_MEM_READ_ONLY,
-                                               required_size_bytes, NULL, &ret);
-      buffer_pool_[i].bufferC = clCreateBuffer(context_, CL_MEM_WRITE_ONLY,
-                                               required_size_bytes, NULL, &ret);
-      if (ret != CL_SUCCESS) {
-         std::cerr
-            << "\n[ERROR] FpgaAccelerator: Failed to allocate buffer pool.\n";
-         exit(EXIT_FAILURE);
-      }
-   }
-
-   allocated_size_bytes_ = required_size_bytes;
-   return true;
-}
-
-/**
- * @brief Acquisisce un indice di buffer dal pool. Se nessun buffer è
- * disponibile per un thread da acquisire, attende in modo non bloccante.
- */
 size_t FpgaAccelerator::acquire_buffer_set() {
-   std::unique_lock<std::mutex> lock(pool_mutex_);
-
-   // Attende finché non c'è un buffer libero.
-   buffer_available_cond_.wait(
-      lock, [this] { return !free_buffer_indices_.empty(); });
-
-   // Th risvegliato. Estrae e restituisce l'indice del buffer libero.
-   size_t index = free_buffer_indices_.front();
-   free_buffer_indices_.pop();
-   return index;
+   return buffer_manager_->acquire_buffer_set();
 }
 
-/**
- * @brief Rilascia un indice di buffer nel pool e notifica i thread in attesa.
- */
 void FpgaAccelerator::release_buffer_set(size_t index) {
-   {
-      std::lock_guard<std::mutex> lock(pool_mutex_);
-      free_buffer_indices_.push(index);
-   }
-
-   buffer_available_cond_.notify_one();
+   buffer_manager_->release_buffer_set(index);
 }
 
 /**
@@ -210,16 +138,15 @@ void FpgaAccelerator::release_buffer_set(size_t index) {
 void FpgaAccelerator::send_data_to_device(void *task_context) {
    cl_int ret; // Codice di ritorno delle chiamate OpenCL
    auto *task = static_cast<Task *>(task_context);
-   BufferSet &current_buffers = buffer_pool_[task->buffer_idx];
 
    std::cerr << "[FpgaAccelerator - START] Processing task " << task->id
              << " with N=" << task->n << "...\n";
 
    // Se la dimensione richiesta è diversa da quella allocata, rialloca
-   // tutti i buffer del pool.
+   // tutti i buffer del pool e ottieni il set di buffer.
    size_t required_size_bytes = sizeof(int) * task->n;
-   if (allocated_size_bytes_ != required_size_bytes)
-      reallocate_buffers(required_size_bytes);
+   buffer_manager_->reallocate_buffers_if_needed(required_size_bytes);
+   auto &current_buffers = buffer_manager_->get_buffer_set(task->buffer_idx);
 
    // Scrivi i due input sulla device memory.
    OCL_CHECK(ret,
@@ -242,7 +169,7 @@ void FpgaAccelerator::send_data_to_device(void *task_context) {
 void FpgaAccelerator::execute_kernel(void *task_context) {
    cl_int ret; // Codice di ritorno delle chiamate OpenCL.
    auto *task = static_cast<Task *>(task_context);
-   BufferSet &current_buffers = buffer_pool_[task->buffer_idx];
+   auto &current_buffers = buffer_manager_->get_buffer_set(task->buffer_idx);
    cl_event previous_event = task->event;
 
    // Imposta gli argomenti del kernel.
@@ -275,10 +202,10 @@ void FpgaAccelerator::execute_kernel(void *task_context) {
  */
 void FpgaAccelerator::get_results_from_device(void *task_context,
                                               long long &computed_ns) {
-   cl_int ret;
+   cl_int ret; // Codice di ritorno delle chiamate OpenCL
    auto *task = static_cast<Task *>(task_context);
    size_t required_size_bytes = sizeof(int) * task->n;
-   BufferSet &current_buffers = buffer_pool_[task->buffer_idx];
+   auto &current_buffers = buffer_manager_->get_buffer_set(task->buffer_idx);
    cl_event previous_event = task->event;
 
    auto t0 = std::chrono::steady_clock::now();
