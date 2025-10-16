@@ -42,10 +42,10 @@ class BufferManager {
  private:
    cl_context context_; // Contesto OpenCL per creare i buffer
 
-   // Dati per il pool di buffer nel device e vars per gestione concorrenza.
+   // Dati per il pool di buffer nel device e per la gestione della concorrenza.
+   const size_t POOL_SIZE = 3;
    std::vector<BufferSet> buffer_pool_;
    std::queue<size_t> free_buffer_indices_;
-   const size_t POOL_SIZE = 3;
    std::mutex pool_mutex_;
    std::condition_variable buffer_available_cond_;
 
