@@ -90,7 +90,7 @@ void print_usage(const char *prog_name) {
              << "  DEVICE       : 'cpu', 'gpu', or 'fpga' (default: 'cpu')\n"
              << "  KERNEL_PATH  : If on GPU or FPGA, path to the kernel file (.cl or .xclbin)\n"
              << "\nExample: " << prog_name
-             << " 16777216 100 gpu kernels/gpu/polynomial_op.cl\n";
+             << " 16777216 100 gpu kernels/polynomial_op.cl\n";
 }
 
 // Helper per stampare le statistiche finali.
