@@ -294,20 +294,22 @@ schedulare il kernel e il tempo speso in attesa che l'operazione sia completata.
 
 
 Avg In node Time (Latency) - Latenza Media di Servizio
-Misura il tempo totale che un singolo task trascorre all'interno del nodo acceleratore, dal suo ingresso (svc) fino al completamento del suo risultato (get_results_from_device). Rappresenta la latenza end-to-end percepita da una singola operazione.
+   Misura il tempo totale che un singolo task trascorre all'interno del nodo acceleratore, dal suo ingresso (svc) fino al completamento del suo risultato (get_results_from_device). Rappresenta la latenza end-to-end percepita da una singola operazione.
 
-Avg Pipeline Period - Periodo Medio della Pipeline
-Misura il tempo medio che intercorre tra il completamento di un task e quello del task successivo quando la pipeline è a pieno regime. Questa metrica rivela la velocità dello stadio più lento del sistema e l'inverso della sua massima portata teorica.
+Avg service time - Periodo Medio della Pipeline
+   Misura il tempo medio che intercorre tra il completamento di un task e quello del task successivo quando la pipeline è a pieno regime. Questa metrica rivela la velocità dello stadio più lento del sistema e l'inverso della sua massima portata teorica.
+   misura la portata massima del sistema a regime."
+
 
 Throughput - Portata Complessiva
 Indica il numero totale di task che l'intero sistema è in grado di processare al secondo, considerando il tempo totale di esecuzione. Misura l'efficienza e la capacità di elaborazione complessiva del sistema dall'inizio alla fine.
-[Immagine di una superstrada trafficata]
+   [Immagine di una superstrada trafficata]
 
 Avg Pure Compute Time - Tempo Medio di Calcolo Puro
-Isola il tempo effettivo che l'hardware dell'acceleratore (GPU o FPGA) impiega per eseguire il calcolo del kernel. Questa metrica esclude tutti i costi accessori come il trasferimento dati e le attese.
+   Isola il tempo effettivo che l'hardware dell'acceleratore (GPU o FPGA) impiega per eseguire il calcolo del kernel. Questa metrica esclude tutti i costi accessori come il trasferimento dati e le attese.
 
 Avg Overhead Time - Overhead Medio
-Rappresenta il "costo di gestione" medio per ogni task, calcolato come la differenza tra la latenza totale e il tempo di calcolo puro. È dominato dal tempo speso per i trasferimenti di dati (I/O) e misura l'inefficienza che la pipeline cerca di nascondere.
+   Rappresenta il "costo di gestione" medio per ogni task, calcolato come la differenza tra la latenza totale e il tempo di calcolo puro. È dominato dal tempo speso per i trasferimenti di dati (I/O) e misura l'inefficienza che la pipeline cerca di nascondere.
 
 
 
@@ -360,7 +362,7 @@ La verifica funzionale è stata completata con successo tramite emulazione softw
 La prova più importante del successo della sua architettura è il confronto tra queste due metriche:
 
 
-Avg Pipeline Period: 1.02 ms
+Avg service time: 1.02 ms
 
 Questa enorme differenza è esattamente ciò che volevamo ottenere. Usiamo l'analogia dell'autolavaggio per capire cosa significa:
 
