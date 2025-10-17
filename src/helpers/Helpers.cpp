@@ -115,14 +115,14 @@ void print_stats(size_t N, size_t NUM_TASKS, const std::string &device_type,
 
    std::cout << "\n------------------------------------------------------------"
                 "------\n"
-             << "PERFORMANCE METRICS on " << device_type << "\n(N=" << N
+             << "PERFORMANCE METRICS on " << device_type << "\nN=" << N
              << ", Tasks=" << final_count;
 
    if (!kernel_name.empty())
-      std::cout << ", Kernel=" << kernel_name << ")\n";
+      std::cout << ", Kernel=" << kernel_name;
 
    std::cout
-      << "------------------------------------------------------------------\n"
+      << "\n------------------------------------------------------------------\n"
       << "Avg Service Time: " << avg_service_time_ms << " ms/task\n"
       << "   (Tempo medio per un task dall'ingresso all'uscita del nodo)\n\n"
       << "Avg Pipeline Period: " << avg_pipeline_period_ms << " ms/task\n"
