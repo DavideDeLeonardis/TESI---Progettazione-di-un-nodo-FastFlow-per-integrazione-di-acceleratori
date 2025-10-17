@@ -1,4 +1,5 @@
 #pragma once
+#include <chrono>
 #include <cstddef>
 
 #ifdef __APPLE__
@@ -15,4 +16,7 @@ struct Task {
    size_t id{0};            // ID del task
    size_t buffer_idx{0};    // Index del buffer set che il task sta usando
    cl_event event{nullptr}; // Ultimo evento OpenCL generato
+
+   // Tempo del task di ingresso nel nodo.
+   std::chrono::steady_clock::time_point arrival_time;
 };

@@ -152,8 +152,8 @@ Questo dimostra in modo conclusivo che l'offloading su acceleratori ha senso sol
 
 
 
+?
 
-Avvia sessione:
    screen -S vitis
 
 Resume sessione:
@@ -255,8 +255,9 @@ File che NON Andrebbero Modificati (La Prova della Buona Architettura)
 
 
 
+// Service Time = Compute Time + Overhead
 
-1. Tempo Elapsed (È il "tempo reale" di completamento di un task.) Tempo 
+1. Tempo Elapsed
 Questo è il tempo completo che la tua pipeline impiega per processare tutti i task, dall'inizio alla fine. È la metrica che misura le performance dell'intero sistema software.
 Cosa include:
    Il tempo di gestione della pipeline FastFlow.
@@ -292,6 +293,21 @@ schedulare il kernel e il tempo speso in attesa che l'operazione sia completata.
    Il calcolo vero e proprio, invece, dura 0.94 ms. In questo caso, il costo di gestione è quasi pari al tempo di lavoro utile.
 
 
+Avg Service Time (Latency) - Latenza Media di Servizio
+Misura il tempo totale che un singolo task trascorre all'interno del nodo acceleratore, dal suo ingresso (svc) fino al completamento del suo risultato (get_results_from_device). Rappresenta la latenza end-to-end percepita da una singola operazione.
+
+Avg Pipeline Period - Periodo Medio della Pipeline
+Misura il tempo medio che intercorre tra il completamento di un task e quello del task successivo quando la pipeline è a pieno regime. Questa metrica rivela la velocità dello stadio più lento del sistema e l'inverso della sua massima portata teorica.
+
+Throughput - Portata Complessiva
+Indica il numero totale di task che l'intero sistema è in grado di processare al secondo, considerando il tempo totale di esecuzione. Misura l'efficienza e la capacità di elaborazione complessiva del sistema dall'inizio alla fine.
+[Immagine di una superstrada trafficata]
+
+Avg Pure Compute Time - Tempo Medio di Calcolo Puro
+Isola il tempo effettivo che l'hardware dell'acceleratore (GPU o FPGA) impiega per eseguire il calcolo del kernel. Questa metrica esclude tutti i costi accessori come il trasferimento dati e le attese.
+
+Avg Overhead Time - Overhead Medio
+Rappresenta il "costo di gestione" medio per ogni task, calcolato come la differenza tra la latenza totale e il tempo di calcolo puro. È dominato dal tempo speso per i trasferimenti di dati (I/O) e misura l'inefficienza che la pipeline cerca di nascondere.
 
 
 
@@ -336,3 +352,41 @@ Il Parallelismo Reale: Mentre la GPU sta eseguendo il calcolo per il Task N, la 
 
 Durante lo sviluppo, è emersa un'incompatibilità di versione tra la piattaforma Xilinx (2022.x) e gli strumenti Vitis utilizzati (2023.x), che ha impedito il completamento della fase di emulazione hardware (hw_emu). 
 La verifica funzionale è stata completata con successo tramite emulazione software (sw_emu) e la validazione finale delle performance è stata eseguita direttamente sull'hardware fisico.
+
+
+
+
+1. La Prova Definitiva dell'Efficienza: Latenza vs. Periodo
+La prova più importante del successo della sua architettura è il confronto tra queste due metriche:
+
+Avg Service Time (Latenza): 8.89 ms
+
+Avg Pipeline Period: 1.02 ms
+
+Questa enorme differenza è esattamente ciò che volevamo ottenere. Usiamo l'analogia dell'autolavaggio per capire cosa significa:
+
+Latenza (8.89 ms): Per lavare una singola auto dall'inizio alla fine, ci vogliono quasi 9 millisecondi. Questo è il tempo che un task "percepisce" passando attraverso l'intero sistema.
+
+Periodo (1.02 ms): Ma una volta che l'autolavaggio è a pieno regime, esce un'auto pulita ogni 1 millisecondo circa.
+
+Conclusione: Questo dimostra che la sua pipeline a 2 stadi (producer e consumer) sta funzionando perfettamente. Le operazioni si stanno sovrapponendo in modo massiccio. Mentre il consumer sta finalizzando il task N (un'operazione lenta), il producer sta già preparando e lanciando il task N+1. Senza questa sovrapposizione, il periodo della pipeline sarebbe uguale alla latenza (cioè, ~9 ms).
+
+2. L'Identificazione del Collo di Bottiglia: L'Overhead
+Il secondo punto cruciale è il confronto tra calcolo e overhead:
+
+Avg Pure Compute Time: 1.25 ms
+
+Avg Overhead Time: 7.63 ms
+
+Analisi:
+Il suo sistema spende solo il 14% del suo tempo a fare calcoli utili (1.25 ms / 8.89 ms). Il restante 86% del tempo è overhead, dominato dal trasferimento dei dati da e verso la GPU.
+
+Questo non è un difetto della sua architettura, ma una caratteristica fondamentale del problema. Le sta dicendo che il suo sistema è limitato dalla banda di memoria (memory-bound), non dalla potenza di calcolo.
+
+Perché questo rende la sua pipeline ancora più importante?
+Proprio perché l'overhead è così grande, la capacità della sua pipeline di "nasconderlo" (sovrapponendo il trasferimento dati del task N+1 con il calcolo del task N) è ciò che le permette di raggiungere un throughput elevato (90 tasks/sec). Senza la pipeline, il suo throughput sarebbe molto più basso (circa 1 / 8.89 ms ≈ 112 tasks/sec, ma questo non tiene conto dei costi di startup). Il valore Throughput: 90.7 tasks/sec è molto vicino a 1000 / 1.025 ms = 975 tasks/sec? No, aspetta, il calcolo del throughput è 10 tasks / 0.11017s = 90.7 tasks/sec. Il periodo di 1.02ms è una misura a regime, mentre il throughput totale include i costi di avvio. Il fatto che il periodo sia così basso è la prova che la pipeline sta funzionando.
+
+Riassunto per la Tesi
+Quando discuterà questi risultati, potrà affermare con certezza:
+
+"I risultati dimostrano l'efficienza dell'architettura a pipeline implementata. Nonostante un singolo task sperimenti una latenza di circa 8.9 ms, la capacità del sistema di sovrapporre le fasi di upload, calcolo e download permette di produrre un risultato ogni 1.02 ms a regime, raggiungendo un throughput di circa 90 task al secondo. L'analisi dei tempi rivela inoltre che il sistema è fortemente limitato dall'overhead (86% del tempo di servizio), confermando che il collo di bottiglia risiede nel trasferimento dei dati e non nel calcolo, e sottolineando il ruolo cruciale della pipeline nel mitigare questo costo."

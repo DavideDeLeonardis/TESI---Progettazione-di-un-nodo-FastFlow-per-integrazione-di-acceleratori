@@ -88,28 +88,54 @@ void print_usage(const char *prog_name) {
              << "  N            : Size of the vectors (default: 1,000,000)\n"
              << "  NUM_TASKS    : Number of tasks to run (default: 50)\n"
              << "  DEVICE       : 'cpu', 'gpu', or 'fpga' (default: 'cpu')\n"
-             << "  KERNEL_PATH  : If on GPU or FPGA, path to the kernel file (.cl or .xclbin)\n"
+             << "  KERNEL_PATH  : If on GPU or FPGA, path to the kernel file "
+                "(.cl or .xclbin)\n"
              << "\nExample: " << prog_name
              << " 16777216 100 gpu kernels/polynomial_op.cl\n";
 }
 
 // Helper per stampare le statistiche finali.
 void print_stats(size_t N, size_t NUM_TASKS, const std::string &device_type,
-                 long long ns_elapsed, long long ns_computed,
-                 size_t final_count) {
-   std::cout << "-------------------------------------------\n"
-             << "Total time for " << NUM_TASKS << " tasks on " << device_type
-             << ":\n"
-             << "N=" << N << " elapsed=" << ns_elapsed << " ns"
-             << ", computed=" << ns_computed << " ns\n"
-             << "-------------------------------------------\n"
-             << "Average time per task:\n"
-             << "Avg elapsed=" << ns_elapsed / (NUM_TASKS == 0 ? 1 : NUM_TASKS)
-             << " ns/task\n"
-             << "Avg computed="
-             << ns_computed / (NUM_TASKS == 0 ? 1 : NUM_TASKS) << " ns/task\n"
-             << "-------------------------------------------\n"
-             << "Tasks processed: " << final_count << " / " << NUM_TASKS
-             << (final_count == NUM_TASKS ? " (SUCCESS)" : " (FAILURE)") << "\n"
-             << "-------------------------------------------\n";
+                 std::string &kernel_name, long long ns_elapsed,
+                 long long ns_computed, long long ns_total_service_time,
+                 long long ns_inter_completion_time, size_t final_count) {
+
+   double elapsed_s = ns_elapsed / 1.0e9; // Trasformato in sec
+   double avg_service_time_ms =
+      (ns_total_service_time / final_count) / 1.0e6; // Trasformato in ms
+   double throughput = (elapsed_s > 0) ? (final_count / elapsed_s) : 0;
+   double avg_computed_ms =
+      (ns_computed / final_count) / 1.0e6; // Trasformato in ms
+   double avg_overhead_ms = avg_service_time_ms - avg_computed_ms;
+
+   double avg_pipeline_period_ms = 0.0;
+   if (final_count > 1)
+      avg_pipeline_period_ms =
+         (ns_inter_completion_time / (final_count - 1)) / 1.0e6;
+
+   std::cout << "\n------------------------------------------------------------"
+                "------\n"
+             << "PERFORMANCE METRICS on " << device_type << "\n(N=" << N
+             << ", Tasks=" << final_count;
+
+   if (!kernel_name.empty())
+      std::cout << ", Kernel=" << kernel_name << ")\n";
+
+   std::cout
+      << "------------------------------------------------------------------\n"
+      << "Avg Service Time: " << avg_service_time_ms << " ms/task\n"
+      << "   (Tempo medio per un task dall'ingresso all'uscita del nodo)\n\n"
+      << "Avg Pipeline Period: " << avg_pipeline_period_ms << " ms/task\n"
+      << "   (Tempo medio tra il completamento di due task consecutivi)\n\n"
+      << "Throughput: " << throughput << " tasks/sec\n"
+      << "   (Task totali processati al secondo)\n\n"
+      << "Avg Pure Compute Time: " << avg_computed_ms << " ms/task\n"
+      << "   (Tempo medio di calcolo sull'acceleratore, senza overhead)\n\n"
+      << "Avg Overhead Time: " << avg_overhead_ms << " ms/task\n"
+      << "   (Costo medio di gestione: trasferimento dati, code, etc.)\n\n"
+      << "Total Time Elapsed: " << elapsed_s << " s\n"
+      << "------------------------------------------------------------------\n"
+      << "Tasks processed: " << final_count << " / " << NUM_TASKS
+      << (final_count == NUM_TASKS ? " (SUCCESS)" : " (FAILURE)") << "\n"
+      << "------------------------------------------------------------------\n";
 }

@@ -60,6 +60,9 @@ void *ff_node_acc_t::svc(void *task) {
       return FF_EOS;
    }
 
+   // Ora di arrivo del task nel nodo.
+   static_cast<Task *>(task)->arrival_time = std::chrono::steady_clock::now();
+
    inQ_.push(task);
    return FF_GO_ON;
 }
@@ -93,6 +96,10 @@ void ff_node_acc_t::producerLoop() {
  * @brief Loop per il 2° stadio della pipeline: Consumer (Download).
  */
 void ff_node_acc_t::consumerLoop() {
+   // Memorizza l'ora di completamento del task precedente.
+   std::chrono::steady_clock::time_point last_completion_time;
+   bool first_task = true;
+
    while (true) {
       // Prende un task pronto dalla coda.
       void *ptr = readyQ_.pop();
@@ -109,8 +116,27 @@ void ff_node_acc_t::consumerLoop() {
       // Attende il completamento del kernel e scarica i risultati sull'host.
       accelerator_->get_results_from_device(task, current_task_ns);
 
+      auto end_time = std::chrono::steady_clock::now();
+
+      // Calcola il tempo di servizio per questo task.
+      auto service_duration =
+         std::chrono::duration_cast<std::chrono::nanoseconds>(
+            end_time - task->arrival_time);
+
+      // Calcola il tempo dall'ultimo completamento.
+      if (!first_task) {
+         auto inter_completion_duration =
+            std::chrono::duration_cast<std::chrono::nanoseconds>(
+               end_time - last_completion_time);
+         stats_->inter_completion_time_ns += inter_completion_duration.count();
+      } else {
+         first_task = false;
+      }
+      last_completion_time = end_time;
+
       // Aggiorna le statistiche sull'oggetto esterno.
       stats_->computed_ns += current_task_ns;
+      stats_->total_service_time_ns += service_duration.count();
       stats_->tasks_processed++;
 
       accelerator_->release_buffer_set(task->buffer_idx);

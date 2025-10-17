@@ -75,7 +75,10 @@ class Emitter : public ff_node {
  */
 void runAcceleratorPipeline(size_t N, size_t NUM_TASKS,
                             IAccelerator *accelerator, long long &ns_elapsed,
-                            long long &ns_computed, size_t &final_count) {
+                            long long &ns_computed,
+                            long long &ns_total_service_time,
+                            long long &ns_inter_completion_time,
+                            size_t &final_count) {
 
    // Dati per ottenere il conteggio finale dei task processati.
    StatsCollector stats;
@@ -107,18 +110,21 @@ void runAcceleratorPipeline(size_t N, size_t NUM_TASKS,
    ns_elapsed =
       std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
    ns_computed = stats.computed_ns.load();
+   ns_total_service_time = stats.total_service_time_ns.load();
+   ns_inter_completion_time = stats.inter_completion_time_ns.load();
 }
 
 int main(int argc, char *argv[]) {
    // Parametri della command line.
    size_t N = 1000000, NUM_TASKS = 50; // Default
    std::string device_type = "cpu";    // Default
-   std::string kernel_path;
-   std::string kernel_name;
+   std::string kernel_path, kernel_name;
 
    long long ns_elapsed = 0;  // Tempo totale (host) per completare tutti i task
-   long long ns_computed = 0; // Tempo totale di calcolo (device)
+   long long ns_computed = 0; // Tempo per il singolo calcolo
    size_t final_count = 0;    // Numero totale di task effettivamente completati
+   long long ns_total_service_time = 0;    // Tempo di servizio totale
+   long long ns_inter_completion_time = 0; // Completamento fra task consecutivi
 
    // Parsing degli argomenti della command line.
    parse_args(argc, argv, N, NUM_TASKS, device_type, kernel_path, kernel_name);
@@ -129,21 +135,25 @@ int main(int argc, char *argv[]) {
    // multicore tramite ff o la pipeline con offloading su GPU/FPGA.
    if (device_type == "cpu") {
       ns_elapsed = executeCpuParallelTasks(N, NUM_TASKS, final_count);
-
-      // Su CPU non c'è overhead di trasferimento dati --> computed = elapsed.
       ns_computed = ns_elapsed;
+      ns_total_service_time = ns_elapsed;
+      if (final_count > 1)
+         ns_inter_completion_time =
+            (ns_elapsed / final_count) * (final_count - 1);
 
    } else if (device_type == "gpu") {
       auto accelerator =
          std::make_unique<GpuAccelerator>(kernel_path, kernel_name);
       runAcceleratorPipeline(N, NUM_TASKS, accelerator.get(), ns_elapsed,
-                             ns_computed, final_count);
+                             ns_computed, ns_total_service_time,
+                             ns_inter_completion_time, final_count);
 
    } else if (device_type == "fpga") {
       auto accelerator =
          std::make_unique<FpgaAccelerator>(kernel_path, kernel_name);
       runAcceleratorPipeline(N, NUM_TASKS, accelerator.get(), ns_elapsed,
-                             ns_computed, final_count);
+                             ns_computed, ns_total_service_time,
+                             ns_inter_completion_time, final_count);
 
    } else {
       std::cerr << "[ERROR] Invalid device type '" << device_type << "'.\n\n";
@@ -151,7 +161,8 @@ int main(int argc, char *argv[]) {
       return -1;
    }
 
-   print_stats(N, NUM_TASKS, device_type, ns_elapsed, ns_computed, final_count);
+   print_stats(N, NUM_TASKS, device_type, kernel_name, ns_elapsed, ns_computed,
+               ns_total_service_time, ns_inter_completion_time, final_count);
 
    return 0;
 }
