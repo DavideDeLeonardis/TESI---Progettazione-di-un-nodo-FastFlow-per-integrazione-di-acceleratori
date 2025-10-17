@@ -79,7 +79,7 @@ bool GpuAccelerator::initialize() {
    buffer_manager_ = std::make_unique<BufferManager>(context_);
 
    // Legge il kernel OpenCL.
-   std::ifstream kernelFile("kernels/complex_op.cl");
+   std::ifstream kernelFile("kernels/polynomial_op.cl");
    if (!kernelFile.is_open()) {
       std::cerr
          << "[ERROR] GpuAccelerator: Could not open kernel file vecAdd.cl\n";
@@ -112,7 +112,7 @@ bool GpuAccelerator::initialize() {
    }
 
    // Crea l'oggetto kernel.
-   kernel_ = clCreateKernel(program_, "complex_op", &ret);
+   kernel_ = clCreateKernel(program_, "polynomial_op", &ret);
    if (!kernel_ || ret != CL_SUCCESS) {
       std::cerr << "[ERROR] GpuAccelerator: Failed to create kernel object.\n";
       return false;

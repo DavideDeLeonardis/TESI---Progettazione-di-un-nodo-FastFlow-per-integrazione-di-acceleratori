@@ -9,7 +9,7 @@
  * @param c Puntatore al vettore di output in memoria globale.
  * @param n Il numero totale di elementi nei vettori.
  */
-__kernel void complex_op(__global const int* a,
+__kernel void polynomial_op(__global const int* a,
                          __global const int* b,
                          __global int* c,
                          const unsigned int n) {
