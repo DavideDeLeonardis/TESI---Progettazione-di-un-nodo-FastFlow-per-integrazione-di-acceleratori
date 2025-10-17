@@ -2,7 +2,11 @@ cmake_minimum_required(VERSION 3.18)
 project(Tesi LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_EXE_LINKER_FLAGS "-static-libstdc++")
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+if(NOT APPLE)
+    set(CMAKE_EXE_LINKER_FLAGS "-static-libstdc++")
+endif()
 
 find_package(OpenCL REQUIRED)
 
@@ -17,13 +21,16 @@ add_executable(tesi-exec
     src/accelerator/BufferManager.cpp
     src/helpers/Helpers.cpp)
 
-    
 target_include_directories(tesi-exec PRIVATE
     SYSTEM ${CMAKE_SOURCE_DIR}/external/fastflow
     ${CMAKE_SOURCE_DIR}/include
     ${OpenCL_INCLUDE_DIRS})
 
 target_link_libraries(tesi-exec PRIVATE OpenCL::OpenCL)
+    
+if(NOT APPLE)
+    target_link_libraries(tesi-exec PRIVATE stdc++fs)
+endif()
     
 target_compile_definitions(tesi-exec PRIVATE CL_TARGET_OPENCL_VERSION=120)
 target_compile_options(tesi-exec PRIVATE -Wno-deprecated-declarations)
