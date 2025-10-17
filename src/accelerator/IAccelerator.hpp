@@ -12,8 +12,6 @@
  * - Thread Consumer (stadio 3): get_results_from_device().
  *
  * ! TODO: Eliminare duplicazione estrema in FpgaAccelerator e GpuAccelerator.
- * ! TODO: Eliminare i nomi hardcoded dei kernel (.xclbin, .cl) e inserirli da
- * !    command line.
  * ! TODO: Rendere eseguibile qualsiasi kernel con qualsiasi tipo di dato
  * !    tramite i vardic template (molto complesso).
  */
