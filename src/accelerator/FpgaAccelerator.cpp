@@ -80,10 +80,11 @@ bool FpgaAccelerator::initialize() {
    buffer_manager_ = std::make_unique<BufferManager>(context_);
 
    // Caricamento del file binario dell'FPGA (.xclbin).
-   std::ifstream binaryFile("kernels/krnl_vadd.xclbin", std::ios::binary);
+   std::ifstream binaryFile("kernels/fpga/krnl_polynomial_op.xclbin",
+                            std::ios::binary);
    if (!binaryFile.is_open()) {
       std::cerr << "[ERROR] FpgaAccelerator: Could not open kernel file "
-                   "krnl_vadd.xclbin.\n";
+                   "krnl_polynomial_op.xclbin.\n";
       return false;
    }
    binaryFile.seekg(0, binaryFile.end);
@@ -109,7 +110,7 @@ bool FpgaAccelerator::initialize() {
    // quella della GPU.
 
    // Crea il kernel.
-   kernel_ = clCreateKernel(program_, "krnl_vadd", &ret);
+   kernel_ = clCreateKernel(program_, "krnl_polynomial_op", &ret);
    if (!kernel_ || ret != CL_SUCCESS) {
       std::cerr << "[ERROR] FpgaAccelerator: Failed to create kernel.\n";
       return false;

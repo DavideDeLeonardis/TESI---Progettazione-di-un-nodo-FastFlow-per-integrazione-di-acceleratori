@@ -79,7 +79,7 @@ bool GpuAccelerator::initialize() {
    buffer_manager_ = std::make_unique<BufferManager>(context_);
 
    // Legge il kernel OpenCL.
-   std::ifstream kernelFile("kernels/polynomial_op.cl");
+   std::ifstream kernelFile("kernels/gpu/polynomial_op.cl");
    if (!kernelFile.is_open()) {
       std::cerr
          << "[ERROR] GpuAccelerator: Could not open kernel file vecAdd.cl\n";
