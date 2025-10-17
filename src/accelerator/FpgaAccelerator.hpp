@@ -1,7 +1,8 @@
 #pragma once
 
-#include "IAccelerator.hpp"
 #include "BufferManager.hpp"
+#include "IAccelerator.hpp"
+#include <string>
 
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
@@ -20,7 +21,8 @@
  */
 class FpgaAccelerator : public IAccelerator {
  public:
-   FpgaAccelerator();
+   FpgaAccelerator(const std::string &kernel_path,
+                   const std::string &kernel_name);
    ~FpgaAccelerator() override;
 
    // Esegue tutte le operazioni di setup una volta sola (creare contesto,
@@ -46,4 +48,7 @@ class FpgaAccelerator : public IAccelerator {
    // Incapsula la logica per l'acquisizione, il rilascio e la riallocazione dei
    // buffer di memoria sul device.
    std::unique_ptr<BufferManager> buffer_manager_;
+
+   std::string kernel_path_;
+   std::string kernel_name_;
 };

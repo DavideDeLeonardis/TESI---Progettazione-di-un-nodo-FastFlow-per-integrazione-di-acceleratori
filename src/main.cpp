@@ -110,19 +110,20 @@ void runAcceleratorPipeline(size_t N, size_t NUM_TASKS,
 }
 
 int main(int argc, char *argv[]) {
-   // Parametri di default della command line.
-   size_t N = 1000000, NUM_TASKS = 50;
-   std::string device_type = "cpu";
+   // Parametri della command line.
+   size_t N = 1000000, NUM_TASKS = 50; // Default
+   std::string device_type = "cpu";    // Default
+   std::string kernel_path;
+   std::string kernel_name;
 
    long long ns_elapsed = 0;  // Tempo totale (host) per completare tutti i task
    long long ns_computed = 0; // Tempo totale di calcolo (device)
    size_t final_count = 0;    // Numero totale di task effettivamente completati
 
    // Parsing degli argomenti della command line.
-   parse_args(argc, argv, N, NUM_TASKS, device_type);
+   parse_args(argc, argv, N, NUM_TASKS, device_type, kernel_path, kernel_name);
 
-   std::cout << "\nConfiguration: N=" << N << ", NUM_TASKS=" << NUM_TASKS
-             << ", Device=" << device_type << "\n\n";
+   print_configuration(N, NUM_TASKS, device_type, kernel_path);
 
    // In base al device scelto, esegue la parallelizzazione dei task su CPU
    // multicore tramite ff o la pipeline con offloading su GPU/FPGA.
@@ -133,12 +134,14 @@ int main(int argc, char *argv[]) {
       ns_computed = ns_elapsed;
 
    } else if (device_type == "gpu") {
-      auto accelerator = std::make_unique<GpuAccelerator>();
+      auto accelerator =
+         std::make_unique<GpuAccelerator>(kernel_path, kernel_name);
       runAcceleratorPipeline(N, NUM_TASKS, accelerator.get(), ns_elapsed,
                              ns_computed, final_count);
 
    } else if (device_type == "fpga") {
-      auto accelerator = std::make_unique<FpgaAccelerator>();
+      auto accelerator =
+         std::make_unique<FpgaAccelerator>(kernel_path, kernel_name);
       runAcceleratorPipeline(N, NUM_TASKS, accelerator.get(), ns_elapsed,
                              ns_computed, final_count);
 

@@ -1,5 +1,6 @@
 #include "FpgaAccelerator.hpp"
 #include <chrono>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <thread>
@@ -21,7 +22,13 @@
       }                                                                        \
    } while (0)
 
-FpgaAccelerator::FpgaAccelerator() {}
+/**
+ * @brief Il costruttrore prende in input il nome della funzione kernel e il suo
+ * path.
+ */
+FpgaAccelerator::FpgaAccelerator(const std::string &kernel_path,
+                                 const std::string &kernel_name)
+    : kernel_path_(kernel_path), kernel_name_(kernel_name) {}
 
 /**
  * @brief Il distruttore si occupa di rilasciare in ordine inverso tutte le
@@ -80,12 +87,16 @@ bool FpgaAccelerator::initialize() {
    buffer_manager_ = std::make_unique<BufferManager>(context_);
 
    // Caricamento del file binario dell'FPGA (.xclbin).
-   std::ifstream binaryFile("kernels/fpga/krnl_polynomial_op.xclbin",
-                            std::ios::binary);
-   if (!binaryFile.is_open()) {
-      std::cerr << "[ERROR] FpgaAccelerator: Could not open kernel file "
-                   "krnl_polynomial_op.xclbin.\n";
-      return false;
+   std::ifstream binaryFile(kernel_path_, std::ios::binary);
+
+   // Controllo che il file sia stato aperto correttamente e che abbia
+   // estensione .xclbin, poi lo leggo.
+   if (!binaryFile.is_open() ||
+       !std::filesystem::is_regular_file(kernel_path_) ||
+       kernel_path_.rfind(".xclbin") == std::string::npos) {
+      std::cerr << "[ERROR] FpgaAccelerator: Could not open kernel file: "
+                << kernel_path_ << "\n";
+      exit(EXIT_FAILURE);
    }
    binaryFile.seekg(0, binaryFile.end);
    size_t binarySize = binaryFile.tellg();
@@ -102,7 +113,7 @@ bool FpgaAccelerator::initialize() {
    if (!program_ || ret != CL_SUCCESS) {
       std::cerr
          << "[ERROR] FpgaAccelerator: Failed to create program from binary.\n";
-      return false;
+      exit(EXIT_FAILURE);
    }
 
    // NON è necessaria la chiamata a clBuildProgram(), il programma è già
@@ -110,10 +121,10 @@ bool FpgaAccelerator::initialize() {
    // quella della GPU.
 
    // Crea il kernel.
-   kernel_ = clCreateKernel(program_, "krnl_polynomial_op", &ret);
+   kernel_ = clCreateKernel(program_, kernel_name_.c_str(), &ret);
    if (!kernel_ || ret != CL_SUCCESS) {
       std::cerr << "[ERROR] FpgaAccelerator: Failed to create kernel.\n";
-      return false;
+      exit(EXIT_FAILURE);
    }
 
    std::cerr << "[FpgaAccelerator] Initialization successful.\n";

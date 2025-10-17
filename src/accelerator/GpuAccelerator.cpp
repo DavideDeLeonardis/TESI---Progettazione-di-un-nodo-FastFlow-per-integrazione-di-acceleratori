@@ -1,5 +1,6 @@
 #include "GpuAccelerator.hpp"
 #include <chrono>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <thread>
@@ -21,7 +22,13 @@
       }                                                                        \
    } while (0)
 
-GpuAccelerator::GpuAccelerator() {}
+/**
+ * @brief Il costruttrore prende in input il nome della funzione kernel e il suo
+ * path.
+ */
+GpuAccelerator::GpuAccelerator(const std::string &kernel_path,
+                               const std::string &kernel_name)
+    : kernel_path_(kernel_path), kernel_name_(kernel_name) {}
 
 /**
  * @brief Il distruttore si occupa di rilasciare in ordine inverso tutte le
@@ -78,12 +85,17 @@ bool GpuAccelerator::initialize() {
    // Chiama il costruttore di BufferManager che iniializza il pool di buffer.
    buffer_manager_ = std::make_unique<BufferManager>(context_);
 
-   // Legge il kernel OpenCL.
-   std::ifstream kernelFile("kernels/gpu/polynomial_op.cl");
-   if (!kernelFile.is_open()) {
-      std::cerr
-         << "[ERROR] GpuAccelerator: Could not open kernel file vecAdd.cl\n";
-      return false;
+   // Legge il kernel OpenCL e verifica che il percorso sia un file valido.
+   std::ifstream kernelFile(kernel_path_);
+
+   // Controllo che il file sia stato aperto correttamente e che abbia
+   // estensione .cl, poi lo leggo.
+   if (!kernelFile.is_open() ||
+       !std::filesystem::is_regular_file(kernel_path_) ||
+       kernel_path_.rfind(".cl") == std::string::npos) {
+      std::cerr << "[ERROR] GpuAccelerator: Could not open kernel file: "
+                << kernel_path_ << "\n";
+      exit(EXIT_FAILURE);
    }
    std::string kernelSource((std::istreambuf_iterator<char>(kernelFile)),
                             (std::istreambuf_iterator<char>()));
@@ -95,7 +107,7 @@ bool GpuAccelerator::initialize() {
       clCreateProgramWithSource(context_, 1, &source_str, &source_size, &ret);
    if (!program_ || ret != CL_SUCCESS) {
       std::cerr << "[ERROR] GpuAccelerator: Failed to create program.\n";
-      return false;
+      exit(EXIT_FAILURE);
    }
 
    // Compila il programma OpenCL.
@@ -108,14 +120,14 @@ bool GpuAccelerator::initialize() {
       std::vector<char> log(log_size);
       clGetProgramBuildInfo(program_, device_id, CL_PROGRAM_BUILD_LOG, log_size,
                             log.data(), NULL);
-      return false;
+      exit(EXIT_FAILURE);
    }
 
    // Crea l'oggetto kernel.
-   kernel_ = clCreateKernel(program_, "polynomial_op", &ret);
+   kernel_ = clCreateKernel(program_, kernel_name_.c_str(), &ret);
    if (!kernel_ || ret != CL_SUCCESS) {
       std::cerr << "[ERROR] GpuAccelerator: Failed to create kernel object.\n";
-      return false;
+      exit(EXIT_FAILURE);
    }
 
    std::cerr << "[GpuAccelerator] Initialization successful.\n";
