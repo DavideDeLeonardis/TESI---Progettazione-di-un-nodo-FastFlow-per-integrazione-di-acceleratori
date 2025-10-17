@@ -76,7 +76,7 @@ class Emitter : public ff_node {
 void runAcceleratorPipeline(size_t N, size_t NUM_TASKS,
                             IAccelerator *accelerator, long long &ns_elapsed,
                             long long &ns_computed,
-                            long long &ns_total_service_time,
+                            long long &ns_total_InNode_time,
                             long long &ns_inter_completion_time,
                             size_t &final_count) {
 
@@ -110,7 +110,7 @@ void runAcceleratorPipeline(size_t N, size_t NUM_TASKS,
    ns_elapsed =
       std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
    ns_computed = stats.computed_ns.load();
-   ns_total_service_time = stats.total_service_time_ns.load();
+   ns_total_InNode_time = stats.ns_total_InNode_time.load();
    ns_inter_completion_time = stats.inter_completion_time_ns.load();
 }
 
@@ -123,8 +123,10 @@ int main(int argc, char *argv[]) {
    long long ns_elapsed = 0;  // Tempo totale (host) per completare tutti i task
    long long ns_computed = 0; // Tempo per il singolo calcolo
    size_t final_count = 0;    // Numero totale di task effettivamente completati
-   long long ns_total_service_time = 0;    // Tempo di servizio totale
-   long long ns_inter_completion_time = 0; // Completamento fra task consecutivi
+   long long ns_total_InNode_time =
+      0; // Tempo totale dei task dall'ingresso all'uscita del nodo
+   long long ns_inter_completion_time =
+      0; // Tempo di completamento fra due task consecutivi
 
    // Parsing degli argomenti della command line.
    parse_args(argc, argv, N, NUM_TASKS, device_type, kernel_path, kernel_name);
@@ -136,7 +138,7 @@ int main(int argc, char *argv[]) {
    if (device_type == "cpu") {
       ns_elapsed = executeCpuParallelTasks(N, NUM_TASKS, final_count);
       ns_computed = ns_elapsed;
-      ns_total_service_time = ns_elapsed;
+      ns_total_InNode_time = ns_elapsed;
       if (final_count > 1)
          ns_inter_completion_time =
             (ns_elapsed / final_count) * (final_count - 1);
@@ -145,14 +147,14 @@ int main(int argc, char *argv[]) {
       auto accelerator =
          std::make_unique<GpuAccelerator>(kernel_path, kernel_name);
       runAcceleratorPipeline(N, NUM_TASKS, accelerator.get(), ns_elapsed,
-                             ns_computed, ns_total_service_time,
+                             ns_computed, ns_total_InNode_time,
                              ns_inter_completion_time, final_count);
 
    } else if (device_type == "fpga") {
       auto accelerator =
          std::make_unique<FpgaAccelerator>(kernel_path, kernel_name);
       runAcceleratorPipeline(N, NUM_TASKS, accelerator.get(), ns_elapsed,
-                             ns_computed, ns_total_service_time,
+                             ns_computed, ns_total_InNode_time,
                              ns_inter_completion_time, final_count);
 
    } else {
@@ -162,7 +164,7 @@ int main(int argc, char *argv[]) {
    }
 
    print_stats(N, NUM_TASKS, device_type, kernel_name, ns_elapsed, ns_computed,
-               ns_total_service_time, ns_inter_completion_time, final_count);
+               ns_total_InNode_time, ns_inter_completion_time, final_count);
 
    return 0;
 }

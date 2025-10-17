@@ -255,7 +255,7 @@ File che NON Andrebbero Modificati (La Prova della Buona Architettura)
 
 
 
-// Service Time = Compute Time + Overhead
+// In node Time = Compute Time + Overhead
 
 1. Tempo Elapsed
 Questo è il tempo completo che la tua pipeline impiega per processare tutti i task, dall'inizio alla fine. È la metrica che misura le performance dell'intero sistema software.
@@ -293,7 +293,7 @@ schedulare il kernel e il tempo speso in attesa che l'operazione sia completata.
    Il calcolo vero e proprio, invece, dura 0.94 ms. In questo caso, il costo di gestione è quasi pari al tempo di lavoro utile.
 
 
-Avg Service Time (Latency) - Latenza Media di Servizio
+Avg In node Time (Latency) - Latenza Media di Servizio
 Misura il tempo totale che un singolo task trascorre all'interno del nodo acceleratore, dal suo ingresso (svc) fino al completamento del suo risultato (get_results_from_device). Rappresenta la latenza end-to-end percepita da una singola operazione.
 
 Avg Pipeline Period - Periodo Medio della Pipeline
@@ -359,7 +359,6 @@ La verifica funzionale è stata completata con successo tramite emulazione softw
 1. La Prova Definitiva dell'Efficienza: Latenza vs. Periodo
 La prova più importante del successo della sua architettura è il confronto tra queste due metriche:
 
-Avg Service Time (Latenza): 8.89 ms
 
 Avg Pipeline Period: 1.02 ms
 

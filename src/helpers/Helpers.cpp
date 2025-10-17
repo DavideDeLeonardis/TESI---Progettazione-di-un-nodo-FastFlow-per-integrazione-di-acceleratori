@@ -97,20 +97,20 @@ void print_usage(const char *prog_name) {
 // Helper per stampare le statistiche finali.
 void print_stats(size_t N, size_t NUM_TASKS, const std::string &device_type,
                  std::string &kernel_name, long long ns_elapsed,
-                 long long ns_computed, long long ns_total_service_time,
+                 long long ns_computed, long long ns_total_InNode_time,
                  long long ns_inter_completion_time, size_t final_count) {
 
    double elapsed_s = ns_elapsed / 1.0e9; // Trasformato in sec
-   double avg_service_time_ms =
-      (ns_total_service_time / final_count) / 1.0e6; // Trasformato in ms
+   double avg_InNode_time_ms =
+      (ns_total_InNode_time / final_count) / 1.0e6; // Trasformato in ms
    double throughput = (elapsed_s > 0) ? (final_count / elapsed_s) : 0;
    double avg_computed_ms =
       (ns_computed / final_count) / 1.0e6; // Trasformato in ms
-   double avg_overhead_ms = avg_service_time_ms - avg_computed_ms;
+   double avg_overhead_ms = avg_InNode_time_ms - avg_computed_ms;
 
-   double avg_pipeline_period_ms = 0.0;
+   double avg_service_time_ms = 0.0;
    if (final_count > 1)
-      avg_pipeline_period_ms =
+      avg_service_time_ms =
          (ns_inter_completion_time / (final_count - 1)) / 1.0e6;
 
    std::cout << "\n------------------------------------------------------------"
@@ -122,17 +122,18 @@ void print_stats(size_t N, size_t NUM_TASKS, const std::string &device_type,
       std::cout << ", Kernel=" << kernel_name;
 
    std::cout
-      << "\n------------------------------------------------------------------\n"
+      << "\n------------------------------------------------------------------"
+         "\n"
       << "Avg Service Time: " << avg_service_time_ms << " ms/task\n"
-      << "   (Tempo medio per un task dall'ingresso all'uscita del nodo)\n\n"
-      << "Avg Pipeline Period: " << avg_pipeline_period_ms << " ms/task\n"
       << "   (Tempo medio tra il completamento di due task consecutivi)\n\n"
-      << "Throughput: " << throughput << " tasks/sec\n"
-      << "   (Task totali processati al secondo)\n\n"
+      << "Avg In_Node Time: " << avg_InNode_time_ms << " ms/task\n"
+      << "   (Tempo medio per un task dall'ingresso all'uscita del nodo)\n\n"
       << "Avg Pure Compute Time: " << avg_computed_ms << " ms/task\n"
       << "   (Tempo medio di calcolo sull'acceleratore, senza overhead)\n\n"
       << "Avg Overhead Time: " << avg_overhead_ms << " ms/task\n"
       << "   (Costo medio di gestione: trasferimento dati, code, etc.)\n\n"
+      << "Throughput: " << throughput << " tasks/sec\n"
+      << "   (Task totali processati al secondo)\n\n"
       << "Total Time Elapsed: " << elapsed_s << " s\n"
       << "------------------------------------------------------------------\n"
       << "Tasks processed: " << final_count << " / " << NUM_TASKS

@@ -118,8 +118,8 @@ void ff_node_acc_t::consumerLoop() {
 
       auto end_time = std::chrono::steady_clock::now();
 
-      // Calcola il tempo di servizio per questo task.
-      auto service_duration =
+      // Calcola il tempo nel nodo per questo task.
+      auto inNode_duration =
          std::chrono::duration_cast<std::chrono::nanoseconds>(
             end_time - task->arrival_time);
 
@@ -136,7 +136,7 @@ void ff_node_acc_t::consumerLoop() {
 
       // Aggiorna le statistiche sull'oggetto esterno.
       stats_->computed_ns += current_task_ns;
-      stats_->total_service_time_ns += service_duration.count();
+      stats_->ns_total_InNode_time += inNode_duration.count();
       stats_->tasks_processed++;
 
       accelerator_->release_buffer_set(task->buffer_idx);
