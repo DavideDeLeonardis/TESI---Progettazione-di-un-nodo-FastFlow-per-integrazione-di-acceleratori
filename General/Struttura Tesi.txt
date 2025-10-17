@@ -1,0 +1,43 @@
+TITOLO:
+   Progettazione di un nodo FastFlow per integrazione di acceleratori
+
+Capitolo 1: Introduzione
+   Contesto: Parta dal quadro generale. La fine della Legge di Moore (il numero di transistor nei circuiti raddoppia all'incirca ogni 18 mesi), la crescente necessità di performance e l'ascesa del calcolo eterogeneo (CPU, GPU, FPGA).
+   Il Problema: Introdurre gli FPGA come soluzione potente ma complessa da programmare e integrare in applicazioni esistenti. Introdurre FastFlow come framework di alto livello per il parallelismo che semplifica la vita dello sviluppatore.
+   Obiettivo della Tesi: Dichiarare chiaramente lo scopo del suo lavoro, collegandosi alla traccia. Es: "L'obiettivo di questa tesi è progettare, implementare e valutare un prototipo software che integri in modo efficiente kernel per FPGA, descritti in OpenCL, all'interno del framework di programmazione parallela FastFlow."
+   Struttura del Documento: Concluda il capitolo con una breve descrizione di cosa tratterà ogni capitolo successivo ("Nel Capitolo 2 verranno introdotte le tecnologie...", etc.).
+
+Capitolo 2: Contesto e Tecnologie
+   FPGA e Calcolo Accelerato: Cosa sono gli FPGA? Come si differenziano da CPU e GPU? Introdurre il concetto di High-Level Synthesis (HLS) e il ruolo di Vitis.
+   Standard OpenCL: Cos'è OpenCL? Perché è lo standard per la programmazione eterogenea? Spiegare brevemente i concetti chiave che ha usato: contesto, coda di comandi, kernel, buffer, eventi.
+   Il Framework FastFlow: Cos'è FastFlow? Quali sono i suoi pattern di parallelismo principali? Spiegare i concetti di ff_node, ff_Pipe e, soprattutto, ff::ParallelFor, dato che li ha usati entrambi.
+
+Capitolo 3: Progetto e Implementazione dell'Architettura
+   Questo è il cuore tecnico della sua tesi, dove descrive il "come" ha costruito il suo progetto.
+   Visione d'Insieme: Presenti l'architettura generale: il main che funge da dispatcher tra l'esecuzione su CPU e quella su acceleratore.
+   Il Percorso CPU: Spieghi la sua implementazione con executeCpuParallelTasks e la scelta di ff::ParallelFor come strumento ideale per il "parallelismo shared memory/thread".
+   Il Percorso Acceleratore: Questa è la parte più importane.
+   La Pipeline Principale: Descriva la ff_Pipe a 2 stadi con Emitter e ff_node_acc_t. Spieghi il ruolo di ciascun nodo.
+   L'Architettura di ff_node_acc_t: Argomenti la scelta di design chiave: l'incapsulamento di una pipeline interna manuale. Spieghi perché ha scelto questo pattern (gestione dello stato) e perché è efficiente (pipeline a 2 stadi producer/consumer con BlockingQueue per evitare l'attesa attiva).
+   L'Astrazione IAccelerator: Spieghi il ruolo dell'interfaccia IAccelerator e delle sue implementazioni (GpuAccelerator, FpgaAccelerator). Argomenti l'importanza di questa astrazione.
+   La Composizione con BufferManager: Descriva perché ha estratto la logica di gestione dei buffer in una classe separata (BufferManager) e come le classi acceleratore la utilizzano (pattern di Composizione).
+
+Capitolo 4: Configurazione Sperimentale e Analisi dei Risultati
+   Questo capitolo presenta i dati e, soprattutto, la loro interpretazione.
+   Ambiente di Test (Setup Sperimentale): Descriva in dettaglio l'hardware (modello di Mac, CPU della VM, scheda Alveo U50) e il software (versioni di OS, Vitis, GCC/Clang, FastFlow) utilizzati.
+   Metodologia di Benchmark: Spieghi come ha condotto i test: il kernel vecAdd, i valori di N scelti, il numero di task (NUM_TASKS=100) e le metriche misurate (elapsed e computed). Spieghi il significato di queste metriche e dell'overhead.
+   Presentazione dei Risultati: Includa tabelle chiare con i dati raccolti (simili a quelle che abbiamo creato). Soprattutto, crei dei grafici per visualizzare i risultati, ad esempio:
+   Grafico 1: Latenza (Avg Elapsed) in funzione di N per CPU, GPU, FPGA.
+   Grafico 2: Throughput (Task al secondo) in funzione di N.
+   Grafico 3 (opzionale): Analisi dell'Overhead in percentuale sul tempo totale.
+   Analisi e Discussione: Questa è la parte più importante. Commenti i risultati:
+   Confronti le performance delle tre piattaforme. Chi vince e perché?
+   Discuta l'impatto della dimensione del problema N. Perché la CPU è più veloce per N piccoli? Dove si trova il "punto di pareggio" (break-even point)?
+   Analizzi l'overhead: è il collo di bottiglia principale? Colleghi uesti dati a ciò che ha visto (o avrebbe visto) in Vitis Analyzer, discutendo il ruolo del trasferimento dati.
+   Menzioni l'errore di allocazione della memoria sull'FPGA per N grandi e ne spieghi la causa (limiti di risorse).
+
+Capitolo 5: Conclusioni e Sviluppi Futuri
+   Sintesi del Lavoro: Riassuma brevemente il problema, la soluzione che ha implementato e i risultati più importanti che ha ottenuto.
+   Contributi: Elenchi i suoi contributi principali (es: "è stato realizzato un prototipo funzionante...", "è stata condotta un'analisi comparativa...", "è stata proposta un'architettura software robusta...").
+   Limitazioni del Lavoro: Sia onesto sui limiti del suo prototipo (es. "testato con un solo kernel", "la gestione degli errori potrebbe essere migliorata", "l'architettura del BufferManager presume un pattern di I/O a 2-input/1-output"). Questo dimostra maturità scientifica.
+   Sviluppi Futuri: Proponga delle idee su come il suo lavoro potrebbe essere esteso. Ad esempio: rendere la classe IAccelerator più generica con i template, testare con kernel più complessi, integrare il prototipo in un'applicazione reale, ecc.

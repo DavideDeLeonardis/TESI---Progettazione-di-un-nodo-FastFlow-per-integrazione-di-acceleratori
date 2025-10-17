@@ -19,12 +19,6 @@ L'account è deleonardis, la macchina è
 
 
 
-9/09 -> CALCOLO SEQUENZIALE
-
-==> pipeline FastFlow a 2 stadi, dove il secondo stadio è un nodo acceleratore custom che incapsula una micro-pipeline interna a 3 stadi per l'esecuzione asincrona su hardware specializzato.
-
-
-
 
 
 
@@ -98,10 +92,6 @@ Punti chiave da ricordare:
 
 
 
-CON 100 TASK: il costo di setup dell'acceleratore viene ammortizzato, rendendo la soluzione GPU vincente in uno scenario a throughput elevato => OK!!!!
-   L'overhead medio per task nella versione a 100 task (919 µs) è crollato rispetto a quello del singolo task (73,827 µs). 
-   Questo dimostra numericamente che l'enorme costo di setup iniziale (la compilazione del kernel, etc.) è stato "spalmato" con successo sui 100 task. 
-   L'overhead rimanente è ora praticamente identico a quello della versione CPU, rappresentando il costo "puro" del framework FastFlow.
 
 
 
@@ -109,22 +99,49 @@ CON 100 TASK: il costo di setup dell'acceleratore viene ammortizzato, rendendo l
 
 
 2. Il Calcolo su GPU non è Sempre Vantaggioso (computed_time)
-Break-Even Point: Per problemi piccoli (N=1M), il computed_time della GPU è peggiore di quello della CPU. 
-Questo è un risultato classico: il tempo risparmiato grazie al parallelismo della GPU è inferiore al tempo speso per trasferire i dati avanti e indietro sulla memoria del dispositivo. 
-Il sistema raggiunge il "break-even" e diventa vantaggioso solo per N sufficientemente grandi.
+- Break-Even Point: Per problemi piccoli (N=1M), il computed_time della GPU è peggiore di quello della CPU. 
+- Il tempo risparmiato grazie al parallelismo della GPU è inferiore al tempo speso per trasferire i dati avanti e indietro sulla memoria del dispositivo. 
+- Il sistema raggiunge il "break-even" e diventa vantaggioso solo per N sufficientemente grandi.
 
 Scalabilità non Lineare: Lo speedup del calcolo non aumenta linearmente con N. Passando da 16M a 67M elementi, lo speedup diminuisce da 1.89x a 1.20x. Questo è un punto di analisi molto interessante per la tesi. Possibili cause:
    - Il task (somma vettoriale) è molto semplice e limita la banda di memoria (memory-bound). 
-   Oltre una certa dimensione, sia la CPU che la GPU sono limitate non dalla loro potenza di calcolo, ma dalla velocità con cui possono leggere e scrivere dalla memoria.
+   - Oltre una certa dimensione, sia la CPU che la GPU sono limitate non dalla loro potenza di calcolo, ma dalla velocità con cui possono leggere e scrivere dalla memoria.
    - La cache della CPU sull'M2 Pro è molto performante e potrebbe mitigare il vantaggio della GPU su problemi così lineari.
 
 
 3. L'Overhead di Inizializzazione Domina il Tempo Totale (elapsed_time)
-Questa è la conclusione più importante di questo esperimento. In tutti i casi, il tempo totale della versione GPU è peggiore di quello della CPU.
-La colonna "Overhead" per la GPU è enorme e relativamente costante (70-95 millisecondi).
-Come avevamo ipotizzato, questo costo è quasi interamente dovuto all'inizializzazione una tantum di OpenCL in svc_init, in particolare alla compilazione JIT (Just-In-Time) del kernel (clBuildProgram).
+L'Overhead" per la GPU è grande
+Questo costo è quasi interamente dovuto all'inizializzazione una tantum di OpenCL in svc_init, in particolare alla compilazione del kernel (clBuildProgram).
 Poiché stiamo eseguendo un singolo task, questo costo fisso iniziale non viene mai ammortizzato e domina completamente il tempo di esecuzione totale. 
+   => CON 100 TASK: il costo di setup dell'acceleratore viene ammortizzato, rendendo la soluzione GPU vincente in uno scenario a throughput elevato => OK!!!!
+   Questo dimostra numericamente che l'enorme costo di setup iniziale (la compilazione del kernel, etc.) è stato "spalmato" con successo sui 100 task. 
+   L'overhead rimanente è ora praticamente identico a quello della versione CPU, rappresentando il costo "puro" del framework FastFlow.
 
+
+2. La Gerarchia delle Performance per la Somma Vettoriale
+Per questo specifico task (somma vettoriale), i tuoi dati mostrano una chiara gerarchia di performance in termini di throughput:
+   GPU > CPU > FPGA
+Questo è un risultato controintuitivo e molto valido. Dimostra che non sempre l'hardware più specializzato è il più veloce e che la natura del problema è fondamentale.
+
+3. Analisi: "Il Martello Giusto per il Chiodo Giusto"
+Perché l'FPGA, un acceleratore hardware, è risultata più lenta della CPU?
+- Task Memory-Bound: La somma vettoriale è un'operazione estremamente semplice, limitata non dalla potenza di calcolo, ma dalla velocità con cui si possono leggere e scrivere dati dalla memoria (memory-bound).
+
+
+
+// Perché Non è Stata Usata una Pipeline FastFlow Interna?
+Sebbene in teoria sembri più elegante annidare una ff_Pipe all'interno del ff_node_acc_t, questa soluzione è inferiore e più complessa a causa della gestione dello stato condiviso.
+L'operazione di offloading richiede che lo stato di un singolo task (IAccelerator e le sue risorse come l'indice del buffer usato e gli eventi OpenCL per la sincronizzazione) sia mantenuto e passato coerentemente tra i nodi di Upload, Launch e Download.
+Se avessimo usato tre nodi FastFlow separati (UploaderNode, LauncherNode, DownloaderNode), avremmo dovuto implementare complessi meccanismi di sincronizzazione esterni (ad esempio, mappe globali protette da mutex) per condividere l'oggetto accelerator e per associare lo stato corretto a ogni task che fluisce attraverso nodi indipendenti. 
+Questo avrebbe reso il codice più difficile da leggere, più prono a errori (race condition) e avrebbe reintrodotto la complessità che il framework dovrebbe nascondere.
+L'architettura attuale, con una pipeline manuale incapsulata in ff_node_acc_t, è superiore perché:
+   Incapsula lo Stato: Il ff_node_acc_t "possiede" l'acceleratore e tutte le sue risorse (come il pool di buffer). Tutta la logica e lo stato sono confinati in un unico componente.
+   Semplifica la Logica: La comunicazione tra i thread interni è banale, poiché condividono lo stato dello stesso oggetto.
+
+
+// ff::ParallelFor
+"CPU multicore": Lo scopo di ff::ParallelFor è proprio quello di distribuire il lavoro di un ciclo for su tutti i core disponibili della sua CPU. 
+   Se ha 8 core, FastFlow creerà una squadra di 8 thread (o un numero ottimale) per eseguire il calcolo.
 
 4. Lezione sulla Legge di Amdahl e l'Ammortamento
 Questi risultati sono una perfetta dimostrazione pratica della Legge di Amdahl. La parte "seriale" del nostro programma (l'inizializzazione di OpenCL) è così lenta che, anche se acceleriamo la parte "parallela" (il calcolo), il guadagno totale è negativo per un singolo task.
@@ -179,14 +196,7 @@ L'architettura a 3 stadi con questo nodo asincrono è instabile in FastFlow => u
 
 
 
-2. La Gerarchia delle Performance per la Somma Vettoriale
-Per questo specifico task (somma vettoriale), i tuoi dati mostrano una chiara gerarchia di performance in termini di throughput:
-   GPU > CPU > FPGA
-Questo è un risultato controintuitivo e molto valido. Dimostra che non sempre l'hardware più specializzato è il più veloce e che la natura del problema è fondamentale.
 
-3. Analisi: "Il Martello Giusto per il Chiodo Giusto"
-Questo è il cuore della tua analisi. Perché l'FPGA, un acceleratore hardware, è risultata più lenta della CPU?
-Task Memory-Bound: La somma vettoriale è un'operazione estremamente semplice, limitata non dalla potenza di calcolo, ma dalla velocità con cui si possono leggere e scrivere dati dalla memoria (memory-bound).
 Ottimizzazione di CPU e GPU: Le CPU e le GPU moderne sono macchine potentissime e altamente ottimizzate per questo tipo di accesso lineare alla memoria, con cache sofisticate e bus di memoria molto ampi.
 Forza dell'FPGA: La vera forza di un'FPGA non è eseguire task semplici, ma implementare pipeline di calcolo complesse e customizzate che non esistono su una CPU/GPU. Ad esempio, algoritmi di compressione video, elaborazione di segnali radio, crittografia, dove i dati fluiscono attraverso una catena di montaggio hardware su misura. Per un task così semplice, l'overhead di comunicazione con la scheda e la sua architettura di memoria generica non riescono a competere.
 Usare un'FPGA per una somma vettoriale è come usare un bisturi chirurgico specializzato per aprire una scatola di cartone: funziona, ma un semplice taglierino (la CPU/GPU) è più efficiente per quel compito specifico.
@@ -246,7 +256,7 @@ File che NON Andrebbero Modificati (La Prova della Buona Architettura)
 
 
 
-1. Tempo Elapsed (È il "tempo reale" di completamento di un task.)
+1. Tempo Elapsed (È il "tempo reale" di completamento di un task.) Tempo 
 Questo è il tempo completo che la tua pipeline impiega per processare tutti i task, dall'inizio alla fine. È la metrica che misura le performance dell'intero sistema software.
 Cosa include:
    Il tempo di gestione della pipeline FastFlow.
@@ -305,22 +315,12 @@ Il Parallelismo Reale: Mentre la GPU sta eseguendo il calcolo per il Task N, la 
 
 
 
-// Perché Non è Stata Usata una Pipeline FastFlow Interna?
-Sebbene in teoria sembri più elegante annidare una ff_Pipe all'interno del ff_node_acc_t, questa soluzione è inferiore e più complessa a causa della gestione dello stato condiviso.
-L'operazione di offloading richiede che lo stato di un singolo task (IAccelerator e le sue risorse come l'indice del buffer usato e gli eventi OpenCL per la sincronizzazione) sia mantenuto e passato coerentemente tra i nodi di Upload, Launch e Download.
-Se avessimo usato tre nodi FastFlow separati (UploaderNode, LauncherNode, DownloaderNode), avremmo dovuto implementare complessi meccanismi di sincronizzazione esterni (ad esempio, mappe globali protette da mutex) per condividere l'oggetto accelerator e per associare lo stato corretto a ogni task che fluisce attraverso nodi indipendenti. 
-Questo avrebbe reso il codice più difficile da leggere, più prono a errori (race condition) e avrebbe reintrodotto la complessità che il framework dovrebbe nascondere.
-L'architettura attuale, con una pipeline manuale incapsulata in ff_node_acc_t, è superiore perché:
-   Incapsula lo Stato: Il ff_node_acc_t "possiede" l'acceleratore e tutte le sue risorse (come il pool di buffer). Tutta la logica e lo stato sono confinati in un unico componente.
-   Semplifica la Logica: La comunicazione tra i thread interni è banale, poiché condividono lo stato dello stesso oggetto.
 
 
 
 
 
-// ff::ParallelFor
-"CPU multicore": Lo scopo di ff::ParallelFor è proprio quello di distribuire il lavoro di un ciclo for su tutti i core disponibili della sua CPU. 
-   Se ha 8 core, FastFlow creerà una squadra di 8 thread (o un numero ottimale) per eseguire il calcolo.
+
 
 "thread": 
    ff::ParallelFor è un'astrazione di alto livello che, sotto il cofano, crea e gestisce un pool di thread per parallelizzare il lavoro.
