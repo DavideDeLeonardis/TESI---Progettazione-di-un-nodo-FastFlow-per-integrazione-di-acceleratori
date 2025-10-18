@@ -9,9 +9,8 @@ Benchmark con N = 10000
 
    # --- FPGA ---
    # Test con il kernel polinomiale
+   ./build/tesi-exec 10000 100 fpga kernels/fpga/krnl_vadd.xclbin
    ./build/tesi-exec 10000 100 fpga kernels/fpga/krnl_polynomial_op.xclbin
-   # Test con il kernel molto complesso
-   ./build/tesi-exec 10000 100 fpga kernels/fpga/krnl_very_complex_op.xclbin
 
 
 Benchmark con N = 1,000,000
@@ -21,9 +20,8 @@ Benchmark con N = 1,000,000
 
    # --- FPGA ---
    # Test con il kernel polinomiale
+   ./build/tesi-exec 1000000 100 fpga kernels/fpga/krnl_vadd.xclbin
    ./build/tesi-exec 1000000 100 fpga kernels/fpga/krnl_polynomial_op.xclbin
-   # Test con il kernel molto complesso
-   ./build/tesi-exec 1000000 100 fpga kernels/fpga/krnl_very_complex_op.xclbin
 
 
 Benchmark con N = 7,449,999 (Limite FPGA)
@@ -33,9 +31,8 @@ Benchmark con N = 7,449,999 (Limite FPGA)
 
    # --- FPGA ---
    # Test con il kernel polinomiale
+   ./build/tesi-exec 7449999 100 fpga kernels/fpga/krnl_vadd.xclbin
    ./build/tesi-exec 7449999 100 fpga kernels/fpga/krnl_polynomial_op.xclbin
-   # Test con il kernel molto complesso
-   ./build/tesi-exec 7449999 100 fpga kernels/fpga/krnl_very_complex_op.xclbin
 
 
 
