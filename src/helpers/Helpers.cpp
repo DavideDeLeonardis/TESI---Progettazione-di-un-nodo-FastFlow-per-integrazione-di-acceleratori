@@ -78,6 +78,8 @@ void print_configuration(size_t N, size_t NUM_TASKS, const std::string &device_t
 
    if (device_type == "gpu_opencl" || device_type == "gpu_metal" || device_type == "fpga")
       std::cout << ", Using " << kernel_path;
+   else
+      std::cout << ", Using kernel: polynomial operation";
 
    std::cout << "\n\n";
 }
