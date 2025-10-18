@@ -5,11 +5,12 @@
 #include <vector>
 
 /**
- * @brief Esegue i task di somma vettoriale in parallelo su tutti i core
- * della CPU utilizzando le direttive OpenMP.
+ * @brief Esegue i task di un'operazione polinomiale complessa (2a² + 3a³ - 4b² + 5b⁵) in parallelo
+ * su tutti i core della CPU utilizzando le direttive OpenMP.
  */
 long long executeCpuOMPTasks(size_t N, size_t NUM_TASKS, size_t &tasks_completed) {
-   std::cout << "[CPU OpenMP] Running vecAdd tasks in PARALLEL on CPU with OpenMP.\n\n";
+   std::cout
+      << "[CPU OpenMP] Running polynomial operation tasks in PARALLEL on CPU with OpenMP.\n\n";
 
    // Inizializzazione dei dati.
    std::vector<int> a(N), b(N), c(N);
@@ -28,8 +29,19 @@ long long executeCpuOMPTasks(size_t N, size_t NUM_TASKS, size_t &tasks_completed
 
 // Dice al compilatore di parallelizzare il ciclo for distribuendolo tra i thread disponibili.
 #pragma omp parallel for
-      for (long i = 0; i < N; ++i)
-         c[i] = a[i] + b[i];
+      for (long i = 0; i < N; ++i) {
+         long long val_a = a[i];
+         long long val_b = b[i];
+
+         long long a2 = val_a * val_a;
+         long long a3 = a2 * val_a;
+         long long b2 = val_b * val_b;
+         long long b4 = b2 * b2;
+         long long b5 = b4 * val_b;
+
+         long long result = (2 * a2) + (3 * a3) - (4 * b2) + (5 * b5);
+         c[i] = (int)result;
+      }
 
       std::cerr << "[CPU OpenMP - END] Task " << task_num + 1 << " finished.\n";
       tasks_completed++;

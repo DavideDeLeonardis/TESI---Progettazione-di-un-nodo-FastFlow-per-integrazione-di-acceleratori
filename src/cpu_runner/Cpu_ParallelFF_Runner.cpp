@@ -4,12 +4,12 @@
 #include <vector>
 
 /**
- * @brief Esegue i task di somma vettoriale in parallelo su tutti i core
- * della CPU utilizzando FastFlow.
+ * @brief Esegue i task di un'operazione polinomiale complessa (2a² + 3a³ - 4b² + 5b⁵) in parallelo
+ * su tutti i core della CPU utilizzando FastFlow.
  */
-long long executeCpuParallelTasks(size_t N, size_t NUM_TASKS,
-                                  size_t &tasks_completed) {
-   std::cout << "[CPU Parallel FF] Running vecAdd tasks in PARALLEL on CPU with FastFlow.\n\n";
+long long executeCpuParallelTasks(size_t N, size_t NUM_TASKS, size_t &tasks_completed) {
+   std::cout << "[CPU Parallel FF] Running polynomial operation tasks in PARALLEL on CPU with "
+                "FastFlow.\n\n";
 
    // Inizializzazione dei dati.
    std::vector<int> a(N), b(N), c(N);
@@ -24,15 +24,26 @@ long long executeCpuParallelTasks(size_t N, size_t NUM_TASKS,
 
    // Esegue NUM_TASKS volte il calcolo parallelo.
    for (size_t task_num = 0; task_num < NUM_TASKS; ++task_num) {
-      std::cerr << "[CPU Parallel FF - START] Processing task " << task_num + 1
-                << " with N=" << N << "...\n";
+      std::cerr << "[CPU Parallel FF - START] Processing task " << task_num + 1 << " with N=" << N
+                << "...\n";
 
-      // Parallelizza il calcolo della somma vettoriale usando ff_parallel_for
+      // Parallelizza il calcolo usando dell'operazione polinomiale usando ff_parallel_for
       // che gestisce il parallelismo a dati su CPU.
-      pf.parallel_for(0, N, 1, 0, [&](const long i) { c[i] = a[i] + b[i]; });
+      pf.parallel_for(0, N, 1, 0, [&](const long i) {
+         long long val_a = a[i];
+         long long val_b = b[i];
 
-      std::cerr << "[CPU Parallel FF - END] Task " << task_num + 1
-                << " finished.\n";
+         long long a2 = val_a * val_a;
+         long long a3 = a2 * val_a;
+         long long b2 = val_b * val_b;
+         long long b4 = b2 * b2;
+         long long b5 = b4 * val_b;
+
+         long long result = (2 * a2) + (3 * a3) - (4 * b2) + (5 * b5);
+         c[i] = (int)result;
+      });
+
+      std::cerr << "[CPU Parallel FF - END] Task " << task_num + 1 << " finished.\n";
 
       tasks_completed++;
    }
