@@ -1,6 +1,4 @@
 #include "../../include/ff_includes.hpp"
-#include "accelerator/FpgaAccelerator.hpp"
-#include "accelerator/GpuAccelerator.hpp"
 #include "accelerator/ff_node_acc_t.hpp"
 #include "cpu_runner/CpuParallelRunner.hpp"
 #include "helpers/Helpers.hpp"
@@ -10,6 +8,15 @@
 #include <memory>
 #include <string>
 #include <vector>
+
+// Gli acceleratori GPU vengono inclusi solo su macOS.
+#ifdef __APPLE__
+#include "accelerator/Gpu_Metal_Accelerator.hpp"
+#include "accelerator/Gpu_OpenCL_Accelerator.hpp"
+#else
+// L'acceleratore FPGA viene incluso solo su sistemi non-Apple (es. VM Pianosa).
+#include "accelerator/FpgaAccelerator.hpp"
+#endif
 
 /**
  * @brief Nodo sorgente della pipeline FastFlow.
@@ -143,23 +150,34 @@ int main(int argc, char *argv[]) {
       if (final_count > 1)
          inter_completion_time_ns =
             (elapsed_ns / final_count) * (final_count - 1);
-
-   } else if (device_type == "gpu") {
+   }
+#ifdef __APPLE__
+   else if (device_type == "gpu_opencl") {
       auto accelerator =
-         std::make_unique<GpuAccelerator>(kernel_path, kernel_name);
+         std::make_unique<Gpu_OpenCL_Accelerator>(kernel_path, kernel_name);
       runAcceleratorPipeline(N, NUM_TASKS, accelerator.get(), elapsed_ns,
                              computed_ns, total_InNode_time_ns,
                              inter_completion_time_ns, final_count);
 
-   } else if (device_type == "fpga") {
+   } else if (device_type == "gpu_metal") {
+      auto accelerator =
+         std::make_unique<Gpu_Metal_Accelerator>(kernel_path, kernel_name);
+      runAcceleratorPipeline(N, NUM_TASKS, accelerator.get(), elapsed_ns,
+                             computed_ns, total_InNode_time_ns,
+                             inter_completion_time_ns, final_count);
+   }
+#else
+   else if (device_type == "fpga") {
       auto accelerator =
          std::make_unique<FpgaAccelerator>(kernel_path, kernel_name);
       runAcceleratorPipeline(N, NUM_TASKS, accelerator.get(), elapsed_ns,
                              computed_ns, total_InNode_time_ns,
                              inter_completion_time_ns, final_count);
-
-   } else {
-      std::cerr << "[ERROR] Invalid device type '" << device_type << "'.\n\n";
+   }
+#endif
+   else {
+      std::cerr << "[ERROR] Invalid device type '" << device_type
+                << "' for this OS.\n\n";
       print_usage(argv[0]);
       return -1;
    }
