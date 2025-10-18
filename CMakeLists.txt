@@ -16,7 +16,7 @@ add_compile_definitions(FF_HEADER_ONLY NO_DEFAULT_MAPPING)
 # Lista dei file sorgente comuni a tutte le piattaforme.
 set(COMMON_SOURCES
     src/main.cpp
-    src/cpu_runner/Cpu_ParallelFF_Runner.cpp
+    src/cpu_runner/Cpu_FF_Runner.cpp
     src/accelerator/ff_node_acc_t.cpp
     src/accelerator/BufferManager.cpp
     src/helpers/Helpers.cpp
@@ -37,7 +37,7 @@ else()
     # Su Linux, compiliamo l'acceleratore FPGA e la versione CPU con OpenMP.
     list(APPEND COMMON_SOURCES 
         src/accelerator/FpgaAccelerator.cpp
-        src/cpu_runner/Cpu_ParallelOMP_Runner.cpp
+        src/cpu_runner/Cpu_OMP_Runner.cpp
     )
     # Linkiamo la libreria filesystem.
     set(PLATFORM_LIBS stdc++fs)
