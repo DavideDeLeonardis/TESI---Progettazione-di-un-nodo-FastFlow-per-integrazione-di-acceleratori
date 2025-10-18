@@ -5,3 +5,4 @@ BreakBeforeBraces: Custom
 BraceWrapping:
   IndentBraces: false
 UseTab: Never
+ColumnLimit: 100
