@@ -136,13 +136,9 @@ int main(int argc, char *argv[]) {
 
    // In base al device scelto, esegue la parallelizzazione dei task su CPU
    // multicore tramite ff o la pipeline con offloading su GPU/FPGA.
-   if (device_type == "cpu_ff") {
+   if (device_type == "cpu_ff")
       elapsed_ns = executeCpu_FF_Tasks(N, NUM_TASKS, final_count);
-      computed_ns = elapsed_ns;
-      total_InNode_time_ns = elapsed_ns;
-      if (final_count > 1)
-         inter_completion_time_ns = (elapsed_ns / final_count) * (final_count - 1);
-   }
+
 #ifdef __APPLE__
    else if (device_type == "gpu_opencl") {
       auto accelerator = std::make_unique<Gpu_OpenCL_Accelerator>(kernel_path, kernel_name);
@@ -157,10 +153,7 @@ int main(int argc, char *argv[]) {
 #else
    else if (device_type == "cpu_omp") {
       elapsed_ns = executeCpu_OMP_Tasks(N, NUM_TASKS, final_count);
-      computed_ns = elapsed_ns;
-      total_InNode_time_ns = elapsed_ns;
-      if (final_count > 1)
-         inter_completion_time_ns = (elapsed_ns / final_count) * (final_count - 1);
+
    } else if (device_type == "fpga") {
       auto accelerator = std::make_unique<FpgaAccelerator>(kernel_path, kernel_name);
       runAcceleratorPipeline(N, NUM_TASKS, accelerator.get(), elapsed_ns, computed_ns,

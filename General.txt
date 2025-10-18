@@ -390,3 +390,84 @@ Riassunto per la Tesi
 Quando discuterà questi risultati, potrà affermare con certezza:
 
 "I risultati dimostrano l'efficienza dell'architettura a pipeline implementata. Nonostante un singolo task sperimenti una latenza di circa 8.9 ms, la capacità del sistema di sovrapporre le fasi di upload, calcolo e download permette di produrre un risultato ogni 1.02 ms a regime, raggiungendo un throughput di circa 90 task al secondo. L'analisi dei tempi rivela inoltre che il sistema è fortemente limitato dall'overhead (86% del tempo di servizio), confermando che il collo di bottiglia risiede nel trasferimento dei dati e non nel calcolo, e sottolineando il ruolo cruciale della pipeline nel mitigare questo costo."
+
+
+
+
+
+
+
+
+
+
+
+Sì, la tabella non solo è coerente, ma è anche estremamente interessante e racconta una storia molto chiara sulle performance del suo sistema. I risultati sono perfettamente in linea con le aspettative teoriche, il che significa che i suoi benchmark sono affidabili.
+
+Analizziamola in breve, perché da qui emergono tutte le conclusioni della sua tesi.
+
+Punti Salienti e Coerenza dei Risultati
+1. Latenza vs. Periodo vs. Throughput: La Pipeline Funziona!
+Questa è la prova più importante. In tutti i test su acceleratore (GPU/FPGA), si osserva sempre lo stesso pattern:
+
+Avg In-Node Time (Latenza) è molto più grande dell'Avg Service Time (Periodo).
+
+Esempio (GPU OpenCL, N=1M, op. polinomiale):
+
+Latenza: 54.4 ms
+
+Periodo: 0.99 ms
+
+Coerenza: Questo è perfettamente coerente. Dimostra che la sua pipeline interna a 2 stadi sta funzionando in modo eccellente. Ci vogliono 54 ms per processare un singolo task, ma grazie alla sovrapposizione delle operazioni, il sistema sforna un nuovo risultato ogni millisecondo. Il Throughput (~940 tasks/sec) è infatti l'inverso del periodo, confermando la coerenza.
+
+2. Metal vs. OpenCL: L'Efficienza dell'API Nativa
+Il confronto su macOS è chiarissimo:
+
+Metal è quasi sempre più veloce di OpenCL, sia in termini di latenza (In-Node Time) che di throughput.
+
+Esempio (Somma vettoriale, N=1M):
+
+OpenCL Throughput: 266 tasks/sec
+
+Metal Throughput: 420 tasks/sec
+
+Coerenza: Anche questo è perfettamente coerente. Dimostra che l'overhead di traduzione di OpenCL in Metal (cl2Metal) ha un costo reale in termini di performance. Usare l'API nativa (Metal) dà un accesso più diretto ed efficiente all'hardware, risultando in performance superiori.
+
+3. CPU (FastFlow) vs. CPU (OpenMP)
+Sulla VM Linux, il confronto tra i due framework di parallelismo CPU è interessante:
+
+OpenMP è leggermente più veloce di FastFlow (ff::ParallelFor).
+
+Esempio (Op. polinomiale, N=1M):
+
+FastFlow Throughput: 302 tasks/sec
+
+OpenMP Throughput: 365 tasks/sec
+
+Coerenza: Questo risultato è plausibile e coerente. Sebbene entrambi siano molto efficienti, le implementazioni dei loro runtime e le strategie di scheduling sono diverse. In questo specifico caso, con questo hardware e questo carico di lavoro, l'implementazione di OpenMP del suo compilatore g++ si è dimostrata leggermente più ottimizzata.
+
+4. FPGA: Latenza Alta, Throughput Basso
+L'FPGA mostra i risultati peggiori in termini di performance.
+
+Esempio (Somma vettoriale, N=1M):
+
+FPGA Throughput: 25 tasks/sec
+
+CPU (OpenMP) Throughput: ~3900 tasks/sec (anche se questo valore sembra molto alto e potrebbe meritare una seconda verifica).
+
+Coerenza: Questo risultato, sebbene possa sembrare deludente, è coerente con il contesto. La performance di un design su FPGA dipende enormemente dal livello di ottimizzazione del kernel HLS e dall'architettura della memoria. Per un calcolo così regolare come la somma vettoriale o un polinomio semplice, la "forza bruta" di migliaia di core di una GPU o di una CPU moderna è spesso superiore a una singola pipeline HLS non ultra-ottimizzata. L'FPGA eccelle in altri ambiti (es. latenza ultra-bassa per un singolo task, efficienza energetica, algoritmi non adatti a GPU).
+
+Conclusioni per la Tesi
+Questa tabella è il cuore della sua tesi. Le permette di affermare con dati alla mano:
+
+L'architettura software funziona: La pipeline a 2 stadi ha dimostrato di essere efficiente nel sovrapporre le operazioni, come evidenziato dalla grande differenza tra latenza e periodo.
+
+Le API native contano: Su macOS, Metal offre un significativo vantaggio prestazionale rispetto a OpenCL, quantificando il costo dell'astrazione multipiattaforma.
+
+Il parallelismo CPU è competitivo: Sia FastFlow che OpenMP offrono ottime performance, con un leggero vantaggio per OpenMP in questo specifico ambiente di test.
+
+L'FPGA richiede specializzazione: L'integrazione con l'FPGA è stata un successo, ma per superare le performance di CPU e GPU su questo tipo di calcoli, sarebbe necessario un lavoro di ottimizzazione HLS molto più approfondito.
+
+
+
+
+Gemini può fare errori, anche riguardo a persone, quindi verifica le sue risposte. La tua privacy e Gemini

@@ -106,22 +106,6 @@ void calculate_and_print_metrics(size_t N, size_t NUM_TASKS, const std::string &
                                  long long computed_ns, long long total_InNode_time_ns,
                                  long long inter_completion_time_ns, size_t final_count) {
 
-   // Tempo medio tra il completamento di due task consecutivi (in ms).
-   double avg_service_time_ms = 0.0;
-   if (final_count > 1)
-      avg_service_time_ms = (inter_completion_time_ns / (final_count - 1)) / 1.0e6;
-
-   // Tempo totale che la pipeline impiega per processare tutti i task (in sec).
-   double elapsed_s = elapsed_ns / 1.0e9;
-   // Tempo medio per un task dall'ingresso all'uscita del nodo (in ms).
-   double avg_InNode_time_ms = (total_InNode_time_ns / final_count) / 1.0e6;
-   // Tempo medio del singolo calcolo sull'acceleratore, senza overhead (in ms).
-   double avg_computed_ms = (computed_ns / final_count) / 1.0e6;
-   // Costo medio di gestione: trasferimento dati, uso delle code, etc.
-   double avg_overhead_ms = avg_InNode_time_ms - avg_computed_ms;
-   // Task totali processati al secondo.
-   double throughput = (elapsed_s > 0) ? (final_count / elapsed_s) : 0;
-
    std::cout << "\n------------------------------------------------------------"
                 "------\n"
              << "PERFORMANCE METRICS on " << device_type << "\n   (N=" << N
@@ -130,22 +114,55 @@ void calculate_and_print_metrics(size_t N, size_t NUM_TASKS, const std::string &
    if (!kernel_name.empty())
       std::cout << ", Kernel=" << kernel_name;
 
-   std::cout << ")\n------------------------------------------------------------------"
-                "\n"
-             << "Avg Service Time: " << avg_service_time_ms << " ms/task\n"
-             << "   (Tempo medio tra il completamento di due task consecutivi)\n\n"
-             << "Avg In_Node Time: " << avg_InNode_time_ms << " ms/task\n"
-             << "   (Tempo medio per un task dall'ingresso all'uscita del nodo)\n\n"
-             << "Avg Pure Compute Time: " << avg_computed_ms << " ms/task\n"
-             << "   (Tempo medio di un singolo calcolo sull'acceleratore, senza "
-                "overhead)\n\n"
-             << "Avg Overhead Time: " << avg_overhead_ms << " ms/task\n"
-             << "   (Costo medio di gestione: trasferimento dati, code, etc.)\n\n"
-             << "Throughput: " << throughput << " tasks/sec\n"
-             << "   (Task totali processati al secondo)\n\n"
-             << "Total Time Elapsed: " << elapsed_s << " s\n"
-             << "------------------------------------------------------------------\n"
-             << "Tasks processed: " << final_count << " / " << NUM_TASKS
-             << (final_count == NUM_TASKS ? " (SUCCESS)" : " (FAILURE)") << "\n"
-             << "------------------------------------------------------------------\n";
+   if (device_type == "cpu_ff" || device_type == "cpu_omp") {
+      double elapsed_s = elapsed_ns / 1.0e9;
+      double avg_task_time_ms = (elapsed_ns / final_count) / 1.0e6;
+      double throughput = (elapsed_s > 0) ? (final_count / elapsed_s) : 0;
+
+      std::cout << ")\n------------------------------------------------------------------\n"
+                << "Avg Time per Task: " << avg_task_time_ms << " ms/task\n"
+                << "   (Tempo medio per completare un singolo task in modo sequenziale)\n\n"
+                << "Throughput: " << throughput << " tasks/sec\n"
+                << "   (Task totali processati al secondo)\n\n"
+                << "Total Time Elapsed: " << elapsed_s << " s\n"
+                << "------------------------------------------------------------------\n"
+                << "Tasks processed: " << final_count << " / " << NUM_TASKS
+                << (final_count == NUM_TASKS ? " (SUCCESS)" : " (FAILURE)") << "\n"
+                << "------------------------------------------------------------------\n";
+   } else {
+      // Tempo medio tra il completamento di due task consecutivi (in ms).
+      double avg_service_time_ms = 0.0;
+      if (final_count > 1)
+         avg_service_time_ms = (inter_completion_time_ns / (final_count - 1)) / 1.0e6;
+
+      // Tempo totale che la pipeline impiega per processare tutti i task (in sec).
+      double elapsed_s = elapsed_ns / 1.0e9;
+      // Tempo medio per un task dall'ingresso all'uscita del nodo (in ms).
+      double avg_InNode_time_ms = (total_InNode_time_ns / final_count) / 1.0e6;
+      // Tempo medio del singolo calcolo sull'acceleratore, senza overhead (in ms).
+      double avg_computed_ms = (computed_ns / final_count) / 1.0e6;
+      // Costo medio di gestione: trasferimento dati, uso delle code, etc.
+      double avg_overhead_ms = avg_InNode_time_ms - avg_computed_ms;
+      // Task totali processati al secondo.
+      double throughput = (elapsed_s > 0) ? (final_count / elapsed_s) : 0;
+
+      std::cout << ")\n------------------------------------------------------------------"
+                   "\n"
+                << "Avg Service Time: " << avg_service_time_ms << " ms/task\n"
+                << "   (Tempo medio tra il completamento di due task consecutivi)\n\n"
+                << "Avg In_Node Time: " << avg_InNode_time_ms << " ms/task\n"
+                << "   (Tempo medio per un task dall'ingresso all'uscita del nodo)\n\n"
+                << "Avg Pure Compute Time: " << avg_computed_ms << " ms/task\n"
+                << "   (Tempo medio di un singolo calcolo sull'acceleratore, senza "
+                   "overhead)\n\n"
+                << "Avg Overhead Time: " << avg_overhead_ms << " ms/task\n"
+                << "   (Costo medio di gestione: trasferimento dati, code, etc.)\n\n"
+                << "Throughput: " << throughput << " tasks/sec\n"
+                << "   (Task totali processati al secondo)\n\n"
+                << "Total Time Elapsed: " << elapsed_s << " s\n"
+                << "------------------------------------------------------------------\n"
+                << "Tasks processed: " << final_count << " / " << NUM_TASKS
+                << (final_count == NUM_TASKS ? " (SUCCESS)" : " (FAILURE)") << "\n"
+                << "------------------------------------------------------------------\n";
+   }
 }
