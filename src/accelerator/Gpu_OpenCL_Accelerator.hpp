@@ -19,11 +19,11 @@
  * - Il thread Consumer esegue lo stadio di Download, utilizzando la
  * funzione qui dichiarata get_results_from_device().
  */
-class GpuAccelerator : public IAccelerator {
+class Gpu_OpenCL_Accelerator : public IAccelerator {
  public:
-   GpuAccelerator(const std::string &kernel_path,
+   Gpu_OpenCL_Accelerator(const std::string &kernel_path,
                   const std::string &kernel_name);
-   ~GpuAccelerator() override;
+   ~Gpu_OpenCL_Accelerator() override;
 
    // Esegue tutte le operazioni di setup una volta sola (creare contesto,
    // coda comandi, compilare kernel, inizializzare pool buffer).

@@ -1,4 +1,4 @@
-#include "GpuAccelerator.hpp"
+#include "Gpu_OpenCL_Accelerator.hpp"
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -7,7 +7,7 @@
 #include <vector>
 
 /**
- * @brief Implementazione della classe GpuAccelerator per l'offloading su GPU.
+ * @brief Implementazione della classe Gpu_OpenCL_Accelerator per l'offloading su GPU.
  */
 
 // Macro per il controllo degli errori OpenCL.
@@ -26,7 +26,7 @@
  * @brief Il costruttrore prende in input il nome della funzione kernel e il suo
  * path.
  */
-GpuAccelerator::GpuAccelerator(const std::string &kernel_path,
+Gpu_OpenCL_Accelerator::Gpu_OpenCL_Accelerator(const std::string &kernel_path,
                                const std::string &kernel_name)
     : kernel_path_(kernel_path), kernel_name_(kernel_name) {}
 
@@ -35,7 +35,7 @@ GpuAccelerator::GpuAccelerator(const std::string &kernel_path,
  risorse OpenCL allocate. La pulizia dei buffer è gestita automaticamente dal
  distruttore di buffer_manager_.
  */
-GpuAccelerator::~GpuAccelerator() {
+Gpu_OpenCL_Accelerator::~Gpu_OpenCL_Accelerator() {
    if (kernel_)
       clReleaseKernel(kernel_);
    if (program_)
@@ -54,7 +54,7 @@ GpuAccelerator::~GpuAccelerator() {
  * kernel, lo compila e prepara l'oggetto kernel, inizializza il pool di buffer
  * e la coda degli indici liberi.
  */
-bool GpuAccelerator::initialize() {
+bool Gpu_OpenCL_Accelerator::initialize() {
    cl_int ret; // Codice di ritorno delle chiamate OpenCL
    cl_platform_id platform_id = NULL;
    cl_device_id device_id = NULL;
@@ -134,11 +134,11 @@ bool GpuAccelerator::initialize() {
    return true;
 }
 
-size_t GpuAccelerator::acquire_buffer_set() {
+size_t Gpu_OpenCL_Accelerator::acquire_buffer_set() {
    return buffer_manager_->acquire_buffer_set();
 }
 
-void GpuAccelerator::release_buffer_set(size_t index) {
+void Gpu_OpenCL_Accelerator::release_buffer_set(size_t index) {
    buffer_manager_->release_buffer_set(index);
 }
 
@@ -149,7 +149,7 @@ void GpuAccelerator::release_buffer_set(size_t index) {
  * dall'ultima operazione, garantendo che lo stadio successivo attenda il
  * completamento di entrambi i trasferimenti.
  */
-void GpuAccelerator::send_data_to_device(void *task_context) {
+void Gpu_OpenCL_Accelerator::send_data_to_device(void *task_context) {
    cl_int ret; // Codice di ritorno delle chiamate OpenCL
    auto *task = static_cast<Task *>(task_context);
 
@@ -180,7 +180,7 @@ void GpuAccelerator::send_data_to_device(void *task_context) {
  * l'evento del completamento del trasferimento dati e ottenendo un nuovo evento
  * che rappresenta il completamento del kernel.
  */
-void GpuAccelerator::execute_kernel(void *task_context) {
+void Gpu_OpenCL_Accelerator::execute_kernel(void *task_context) {
    cl_int ret; // Codice di ritorno delle chiamate OpenCL.
    auto *task = static_cast<Task *>(task_context);
    auto &current_buffers = buffer_manager_->get_buffer_set(task->buffer_idx);
@@ -217,7 +217,7 @@ void GpuAccelerator::execute_kernel(void *task_context) {
  * memoria host, aspettando che l'upload e l'esecuzione del kernel siano
  * completati. È l'unica funzione bloccante della pipeline.
  */
-void GpuAccelerator::get_results_from_device(void *task_context,
+void Gpu_OpenCL_Accelerator::get_results_from_device(void *task_context,
                                              long long &computed_ns) {
    cl_int ret; // Codice di ritorno delle chiamate OpenCL
    auto *task = static_cast<Task *>(task_context);
