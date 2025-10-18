@@ -1,6 +1,6 @@
 #include "../../include/ff_includes.hpp"
 #include "accelerator/ff_node_acc_t.hpp"
-#include "cpu_runner/Cpu_ParallelFF_Runner.hpp"
+#include "cpu_runner/Cpu_FF_Runner.hpp"
 #include "helpers/Helpers.hpp"
 #include <chrono>
 #include <future>
@@ -14,7 +14,7 @@
 #include "accelerator/Gpu_OpenCL_Accelerator.hpp"
 #else
 #include "accelerator/FpgaAccelerator.hpp"
-#include "cpu_runner/Cpu_ParallelOMP_Runner.hpp"
+#include "cpu_runner/Cpu_OMP_Runner.hpp"
 #endif
 
 /**
@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
    // In base al device scelto, esegue la parallelizzazione dei task su CPU
    // multicore tramite ff o la pipeline con offloading su GPU/FPGA.
    if (device_type == "cpu_ff") {
-      elapsed_ns = executeCpuParallelTasks(N, NUM_TASKS, final_count);
+      elapsed_ns = executeCpu_FF_Tasks(N, NUM_TASKS, final_count);
       computed_ns = elapsed_ns;
       total_InNode_time_ns = elapsed_ns;
       if (final_count > 1)
@@ -156,7 +156,7 @@ int main(int argc, char *argv[]) {
    }
 #else
    else if (device_type == "cpu_omp") {
-      elapsed_ns = executeCpuOMPTasks(N, NUM_TASKS, final_count);
+      elapsed_ns = executeCpu_OMP_Tasks(N, NUM_TASKS, final_count);
       computed_ns = elapsed_ns;
       total_InNode_time_ns = elapsed_ns;
       if (final_count > 1)
