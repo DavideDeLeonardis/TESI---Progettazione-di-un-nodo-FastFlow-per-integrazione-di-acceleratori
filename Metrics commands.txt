@@ -48,12 +48,12 @@ Benchmark con N = 10000
    ./build/tesi-exec 10000 100 cpu_ff
 
    # --- GPU (OpenCL) ---
-   ./build/tesi-exec 10000 100 gpu kernels/gpu/polynomial_op.cl
-   ./build/tesi-exec 10000 100 gpu kernels/gpu/very_complex_op.cl
+   ./build/tesi-exec 10000 100 gpu_opencl kernels/gpu/vecAdd.cl
+   ./build/tesi-exec 10000 100 gpu_opencl kernels/gpu/polynomial_op.cl
 
    # --- GPU (Metal) ---
-   ./build/tesi-exec 10000 100 metal kernels/metal/polynomial_op.metal
-   ./build/tesi-exec 10000 100 metal kernels/metal/very_complex_op.metal
+   ./build/tesi-exec 10000 100 gpu_metal kernels/gpu/vecAdd.metal
+   ./build/tesi-exec 10000 100 gpu_metal kernels/gpu/polynomial_op.metal
 
 
 Benchmark con N = 1,000,000
@@ -61,12 +61,12 @@ Benchmark con N = 1,000,000
    ./build/tesi-exec 1000000 100 cpu_ff
 
    # --- GPU (OpenCL) ---
-   ./build/tesi-exec 1000000 100 gpu kernels/gpu/polynomial_op.cl
-   ./build/tesi-exec 1000000 100 gpu kernels/gpu/very_complex_op.cl
+   ./build/tesi-exec 1000000 100 gpu_opencl kernels/gpu/vecAdd.cl
+   ./build/tesi-exec 1000000 100 gpu_opencl kernels/gpu/polynomial_op.cl
 
    # --- GPU (Metal) ---
-   ./build/tesi-exec 1000000 100 metal kernels/metal/polynomial_op.metal
-   ./build/tesi-exec 1000000 100 metal kernels/metal/very_complex_op.metal
+   ./build/tesi-exec 1000000 100 gpu_metal kernels/gpu/vecAdd.metal
+   ./build/tesi-exec 1000000 100 gpu_metal kernels/gpu/polynomial_op.metal
 
 
 Benchmark con N = 7,449,999
@@ -74,9 +74,9 @@ Benchmark con N = 7,449,999
    ./build/tesi-exec 7449999 100 cpu_ff
 
    # --- GPU (OpenCL) ---
-   ./build/tesi-exec 7449999 100 gpu kernels/gpu/polynomial_op.cl
-   ./build/tesi-exec 7449999 100 gpu kernels/gpu/very_complex_op.cl
+   ./build/tesi-exec 7449999 100 gpu_opencl kernels/gpu/vecAdd.cl
+   ./build/tesi-exec 7449999 100 gpu_opencl kernels/gpu/polynomial_op.cl
 
    # --- GPU (Metal) ---
-   ./build/tesi-exec 7449999 100 metal kernels/metal/polynomial_op.metal
-   ./build/tesi-exec 7449999 100 metal kernels/metal/very_complex_op.metal
+   ./build/tesi-exec 7449999 100 gpu_metal kernels/gpu/vecAdd.metal
+   ./build/tesi-exec 7449999 100 gpu_metal kernels/gpu/polynomial_op.metal
