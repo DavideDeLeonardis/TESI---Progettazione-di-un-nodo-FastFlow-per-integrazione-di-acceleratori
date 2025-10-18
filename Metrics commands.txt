@@ -1,0 +1,82 @@
+//
+// VM Pianosa, 100 task
+//
+
+Benchmark con N = 10000
+   # --- CPU ---
+   ./build/tesi-exec 10000 100 cpu_ff
+   ./build/tesi-exec 10000 100 cpu_omp
+
+   # --- FPGA ---
+   # Test con il kernel polinomiale
+   ./build/tesi-exec 10000 100 fpga kernels/fpga/krnl_polynomial_op.xclbin
+   # Test con il kernel molto complesso
+   ./build/tesi-exec 10000 100 fpga kernels/fpga/krnl_very_complex_op.xclbin
+
+
+Benchmark con N = 1,000,000
+   # --- CPU ---
+   ./build/tesi-exec 1000000 100 cpu_ff
+   ./build/tesi-exec 1000000 100 cpu_omp
+
+   # --- FPGA ---
+   # Test con il kernel polinomiale
+   ./build/tesi-exec 1000000 100 fpga kernels/fpga/krnl_polynomial_op.xclbin
+   # Test con il kernel molto complesso
+   ./build/tesi-exec 1000000 100 fpga kernels/fpga/krnl_very_complex_op.xclbin
+
+
+Benchmark con N = 7,449,999 (Limite FPGA)
+   # --- CPU ---
+   ./build/tesi-exec 7449999 100 cpu_ff
+   ./build/tesi-exec 7449999 100 cpu_omp
+
+   # --- FPGA ---
+   # Test con il kernel polinomiale
+   ./build/tesi-exec 7449999 100 fpga kernels/fpga/krnl_polynomial_op.xclbin
+   # Test con il kernel molto complesso
+   ./build/tesi-exec 7449999 100 fpga kernels/fpga/krnl_very_complex_op.xclbin
+
+
+
+//
+// MacOS
+//
+
+Benchmark con N = 10000
+   # --- CPU ---
+   ./build/tesi-exec 10000 100 cpu_ff
+
+   # --- GPU (OpenCL) ---
+   ./build/tesi-exec 10000 100 gpu kernels/gpu/polynomial_op.cl
+   ./build/tesi-exec 10000 100 gpu kernels/gpu/very_complex_op.cl
+
+   # --- GPU (Metal) ---
+   ./build/tesi-exec 10000 100 metal kernels/metal/polynomial_op.metal
+   ./build/tesi-exec 10000 100 metal kernels/metal/very_complex_op.metal
+
+
+Benchmark con N = 1,000,000
+   # --- CPU ---
+   ./build/tesi-exec 1000000 100 cpu_ff
+
+   # --- GPU (OpenCL) ---
+   ./build/tesi-exec 1000000 100 gpu kernels/gpu/polynomial_op.cl
+   ./build/tesi-exec 1000000 100 gpu kernels/gpu/very_complex_op.cl
+
+   # --- GPU (Metal) ---
+   ./build/tesi-exec 1000000 100 metal kernels/metal/polynomial_op.metal
+   ./build/tesi-exec 1000000 100 metal kernels/metal/very_complex_op.metal
+
+
+Benchmark con N = 7,449,999
+   # --- CPU ---
+   ./build/tesi-exec 7449999 100 cpu_ff
+
+   # --- GPU (OpenCL) ---
+   ./build/tesi-exec 7449999 100 gpu kernels/gpu/polynomial_op.cl
+   ./build/tesi-exec 7449999 100 gpu kernels/gpu/very_complex_op.cl
+
+   # --- GPU (Metal) ---
+   ./build/tesi-exec 7449999 100 metal kernels/metal/polynomial_op.metal
+   ./build/tesi-exec 7449999 100 metal kernels/metal/very_complex_op.metal
