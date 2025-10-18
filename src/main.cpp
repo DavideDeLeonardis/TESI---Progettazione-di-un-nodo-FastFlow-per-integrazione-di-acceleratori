@@ -128,7 +128,8 @@ int main(int argc, char *argv[]) {
    long long inter_completion_time_ns =
       0; // Tempo di completamento fra due task consecutivi
 
-   // Parsing degli argomenti della command line.
+   // Parsing degli argomenti della command line. Setta anche il kernel di
+   // default per GPU e FPGA.
    parse_args(argc, argv, N, NUM_TASKS, device_type, kernel_path, kernel_name);
 
    print_configuration(N, NUM_TASKS, device_type, kernel_path);
