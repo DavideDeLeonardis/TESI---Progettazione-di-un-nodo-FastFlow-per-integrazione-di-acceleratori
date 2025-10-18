@@ -1,4 +1,4 @@
-#include "CpuParallelRunner.hpp"
+#include "Cpu_ParallelFF_Runner.hpp"
 #include <chrono>
 #include <iostream>
 #include <vector>
@@ -9,7 +9,7 @@
  */
 long long executeCpuParallelTasks(size_t N, size_t NUM_TASKS,
                                   size_t &tasks_completed) {
-   std::cout << "[CPU Parallel] Running vecAdd tasks in PARALLEL on CPU.\n\n";
+   std::cout << "[CPU Parallel FF] Running vecAdd tasks in PARALLEL on CPU with FastFlow.\n\n";
 
    // Inizializzazione dei dati.
    std::vector<int> a(N), b(N), c(N);
@@ -24,14 +24,14 @@ long long executeCpuParallelTasks(size_t N, size_t NUM_TASKS,
 
    // Esegue NUM_TASKS volte il calcolo parallelo.
    for (size_t task_num = 0; task_num < NUM_TASKS; ++task_num) {
-      std::cerr << "[CPU Parallel - START] Processing task " << task_num + 1
+      std::cerr << "[CPU Parallel FF - START] Processing task " << task_num + 1
                 << " with N=" << N << "...\n";
 
       // Parallelizza il calcolo della somma vettoriale usando ff_parallel_for
       // che gestisce il parallelismo a dati su CPU.
       pf.parallel_for(0, N, 1, 0, [&](const long i) { c[i] = a[i] + b[i]; });
 
-      std::cerr << "[CPU Parallel - END] Task " << task_num + 1
+      std::cerr << "[CPU Parallel FF - END] Task " << task_num + 1
                 << " finished.\n";
 
       tasks_completed++;
