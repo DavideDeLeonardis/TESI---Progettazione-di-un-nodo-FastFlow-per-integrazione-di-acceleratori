@@ -57,18 +57,18 @@ void parse_args(int argc, char *argv[], size_t &N, size_t &NUM_TASKS,
       exit(EXIT_FAILURE);
    }
 
-   // Se gpu o fpga, e il percorso non è stato specificato, imposta quello di
-   // default.
-   if (device_type == "gpu") {
-      if (kernel_path.empty())
-         kernel_path = "kernels/gpu/polynomial_op.cl";
-   } else if (device_type == "fpga") {
-      if (kernel_path.empty())
-         kernel_path = "kernels/fpga/krnl_polynomial_op.xclbin";
-   }
+   // Se gpu o fpga, e il path del kernel non è stato specificato, imposta
+   // polynomial_op.
+   if (device_type == "gpu_opencl" && kernel_path.empty())
+      kernel_path = "kernels/gpu/polynomial_op.cl";
+   else if (device_type == "fpga" && kernel_path.empty())
+      kernel_path = "kernels/fpga/krnl_polynomial_op.xclbin";
+   else if (device_type == "gpu_metal" && kernel_path.empty())
+      kernel_path = "kernels/gpu/polynomial_op.metal";
 
    // Estrae il nome del kernel dal percorso del file, se GPU o FPGA.
-   if (device_type == "gpu" || device_type == "fpga")
+   if (device_type == "gpu_opencl" || device_type == "fpga" ||
+       device_type == "gpu_metal")
       kernel_name = extractKernelName(kernel_path);
 }
 
@@ -81,7 +81,8 @@ void print_configuration(size_t N, size_t NUM_TASKS,
    std::cout << "\nConfiguration: N=" << N << ", NUM_TASKS=" << NUM_TASKS
              << ", Device=" << device_type;
 
-   if (device_type == "gpu" || device_type == "fpga")
+   if (device_type == "gpu_opencl" || device_type == "gpu_metal" ||
+       device_type == "fpga")
       std::cout << ", Using " << kernel_path;
 
    std::cout << "\n\n";
@@ -95,11 +96,12 @@ void print_usage(const char *prog_name) {
              << " [N] [NUM_TASKS] [DEVICE] [KERNEL_PATH]\n"
              << "  N            : Size of the vectors (default: 1,000,000)\n"
              << "  NUM_TASKS    : Number of tasks to run (default: 50)\n"
-             << "  DEVICE       : 'cpu', 'gpu', or 'fpga' (default: 'cpu')\n"
+             << "  DEVICE       : 'cpu', 'gpu_opencl', 'gpu_metal' or 'fpga' "
+                "(default: 'cpu').\n"
              << "  KERNEL_PATH  : If on GPU or FPGA, path to the kernel file "
-                "(.cl or .xclbin)\n"
+                "(.cl, .xclbin or .metal)\n"
              << "\nExample: " << prog_name
-             << " 16777216 100 gpu kernels/polynomial_op.cl\n";
+             << " 16777216 100 gpu kernels/gpu/polynomial_op.cl\n";
 }
 
 // Helper per stampare le statistiche finali.
