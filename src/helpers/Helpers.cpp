@@ -49,8 +49,9 @@ void parse_args(int argc, char *argv[], size_t &N, size_t &NUM_TASKS, std::strin
       exit(-1);
    }
 
-   if (N == 0) {
-      std::cerr << "[FATAL] La dimensione dei vettori (N) non può essere 0.\n";
+   if (N == 0 || NUM_TASKS == 0) {
+      std::cerr << "\n[FATAL] La dimensione dei vettori (N) o del numero dei task (NUM_TASKS) non "
+                   "può essere 0.\n";
       exit(EXIT_FAILURE);
    }
 
@@ -95,7 +96,8 @@ void print_usage(const char *prog_name) {
                 "(default: 'cpu_ff').\n"
              << "  KERNEL_PATH  : If on GPU or FPGA, path to the kernel file "
                 "(.cl, .xclbin or .metal)\n"
-             << "\nExample: " << prog_name << " 16777216 100 gpu_opencl kernels/gpu/polynomial_op.cl\n";
+             << "\nExample: " << prog_name
+             << " 16777216 100 gpu_opencl kernels/gpu/polynomial_op.cl\n";
 }
 
 // Helper per stampare le statistiche finali.
