@@ -118,8 +118,8 @@ void runAcceleratorPipeline(size_t N, size_t NUM_TASKS, IAccelerator *accelerato
 
 int main(int argc, char *argv[]) {
    // Parametri della command line.
-   size_t N = 1000000, NUM_TASKS = 50; // Default
-   std::string device_type = "cpu_ff"; // Default cpu che usa ff::parallel_for
+   size_t N = 1000000, NUM_TASKS = 20; // Default
+   std::string device_type = "cpu_ff"; // Default: cpu che usa ff::parallel_for
    std::string kernel_path, kernel_name;
 
    long long elapsed_ns = 0;           // Tempo totale (host) per completare tutti i task
