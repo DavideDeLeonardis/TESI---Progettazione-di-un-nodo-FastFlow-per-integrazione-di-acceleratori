@@ -9,12 +9,10 @@
 #include <string>
 #include <vector>
 
-// Gli acceleratori GPU vengono inclusi solo su macOS.
 #ifdef __APPLE__
 #include "accelerator/Gpu_Metal_Accelerator.hpp"
 #include "accelerator/Gpu_OpenCL_Accelerator.hpp"
 #else
-// L'acceleratore FPGA viene incluso solo su sistemi non-Apple (es. VM Pianosa).
 #include "accelerator/FpgaAccelerator.hpp"
 #endif
 
