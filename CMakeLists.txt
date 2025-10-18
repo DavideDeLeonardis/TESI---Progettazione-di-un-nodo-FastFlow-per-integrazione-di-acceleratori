@@ -9,10 +9,6 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if(NOT APPLE)
-    set(CMAKE_EXE_LINKER_FLAGS "-static-libstdc++")
-endif()
-
 find_package(OpenCL REQUIRED)
 
 add_compile_definitions(FF_HEADER_ONLY NO_DEFAULT_MAPPING)
@@ -20,7 +16,7 @@ add_compile_definitions(FF_HEADER_ONLY NO_DEFAULT_MAPPING)
 # Lista dei file sorgente comuni a tutte le piattaforme.
 set(COMMON_SOURCES
     src/main.cpp
-    src/cpu_runner/CpuParallelRunner.cpp
+    src/cpu_runner/Cpu_ParallelFF_Runner.cpp
     src/accelerator/ff_node_acc_t.cpp
     src/accelerator/BufferManager.cpp
     src/helpers/Helpers.cpp
@@ -38,8 +34,12 @@ if(APPLE)
     find_library(FOUNDATION_LIBRARY Foundation REQUIRED)
     set(PLATFORM_LIBS ${METAL_LIBRARY} ${FOUNDATION_LIBRARY})
 else()
-    # Su Linux, compiliamo solo l'acceleratore FPGA e linkiamo la libreria filesystem.
-    list(APPEND COMMON_SOURCES src/accelerator/FpgaAccelerator.cpp)
+    # Su Linux, compiliamo l'acceleratore FPGA e la versione CPU con OpenMP.
+    list(APPEND COMMON_SOURCES 
+        src/accelerator/FpgaAccelerator.cpp
+        src/cpu_runner/Cpu_ParallelOMP_Runner.cpp
+    )
+    # Linkiamo la libreria filesystem.
     set(PLATFORM_LIBS stdc++fs)
 endif()
 
@@ -56,12 +56,21 @@ target_link_libraries(tesi-exec PRIVATE
     OpenCL::OpenCL
     ${PLATFORM_LIBS}
 )
+
+# Aggiunge e linka OpenMP solo su sistemi non-Apple (Linux).
+if(NOT APPLE)
+    find_package(OpenMP)
+    if(OpenMP_FOUND)
+        message(STATUS "OpenMP found, enabling parallel OMP execution.")
+        target_link_libraries(tesi-exec PRIVATE OpenMP::OpenMP_CXX)
+    endif()
+    target_link_libraries(tesi-exec PRIVATE "-static-libstdc++")
+endif()
     
 target_compile_definitions(tesi-exec PRIVATE CL_TARGET_OPENCL_VERSION=120)
 target_compile_options(tesi-exec PRIVATE -Wno-deprecated-declarations)
 
-# Diciamo a CMake di trattare il file .mm come Objective-C++ e di attivare 
-# ARC (gestione automatica della memoria).
+# Diciamo a CMake di trattare il file .mm come Objective-C++ e di attivare ARC.
 if(APPLE)
     set_source_files_properties(src/accelerator/Gpu_Metal_Accelerator.mm PROPERTIES
         LANGUAGE OBJCXX
