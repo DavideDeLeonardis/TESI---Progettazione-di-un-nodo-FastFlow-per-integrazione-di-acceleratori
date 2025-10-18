@@ -74,10 +74,10 @@ class Emitter : public ff_node {
  * completati.
  */
 void runAcceleratorPipeline(size_t N, size_t NUM_TASKS,
-                            IAccelerator *accelerator, long long &ns_elapsed,
-                            long long &ns_computed,
-                            long long &ns_total_InNode_time,
-                            long long &ns_inter_completion_time,
+                            IAccelerator *accelerator, long long &elapsed_ns,
+                            long long &computed_ns,
+                            long long &total_InNode_time_ns,
+                            long long &inter_completion_time_ns,
                             size_t &final_count) {
 
    // Dati per ottenere il conteggio finale dei task processati.
@@ -97,8 +97,8 @@ void runAcceleratorPipeline(size_t N, size_t NUM_TASKS,
    // Avvio della pipeline e attesa del completamento.
    if (pipe.run_and_wait_end() < 0) {
       std::cerr << "[ERROR] Main: Pipeline execution failed.\n";
-      ns_elapsed = 0;
-      ns_computed = 0;
+      elapsed_ns = 0;
+      computed_ns = 0;
       final_count = 0;
       return;
    }
@@ -107,11 +107,11 @@ void runAcceleratorPipeline(size_t N, size_t NUM_TASKS,
 
    // Raccolta dei risultati.
    final_count = count_future.get();
-   ns_elapsed =
+   elapsed_ns =
       std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
-   ns_computed = stats.computed_ns.load();
-   ns_total_InNode_time = stats.ns_total_InNode_time.load();
-   ns_inter_completion_time = stats.inter_completion_time_ns.load();
+   computed_ns = stats.computed_ns.load();
+   total_InNode_time_ns = stats.total_InNode_time_ns.load();
+   inter_completion_time_ns = stats.inter_completion_time_ns.load();
 }
 
 int main(int argc, char *argv[]) {
@@ -120,12 +120,12 @@ int main(int argc, char *argv[]) {
    std::string device_type = "cpu";    // Default
    std::string kernel_path, kernel_name;
 
-   long long ns_elapsed = 0;  // Tempo totale (host) per completare tutti i task
-   long long ns_computed = 0; // Tempo per il singolo calcolo
+   long long elapsed_ns = 0;  // Tempo totale (host) per completare tutti i task
+   long long computed_ns = 0; // Tempo per il singolo calcolo
    size_t final_count = 0;    // Numero totale di task effettivamente completati
-   long long ns_total_InNode_time =
+   long long total_InNode_time_ns =
       0; // Tempo totale dei task dall'ingresso all'uscita del nodo
-   long long ns_inter_completion_time =
+   long long inter_completion_time_ns =
       0; // Tempo di completamento fra due task consecutivi
 
    // Parsing degli argomenti della command line.
@@ -136,26 +136,26 @@ int main(int argc, char *argv[]) {
    // In base al device scelto, esegue la parallelizzazione dei task su CPU
    // multicore tramite ff o la pipeline con offloading su GPU/FPGA.
    if (device_type == "cpu") {
-      ns_elapsed = executeCpuParallelTasks(N, NUM_TASKS, final_count);
-      ns_computed = ns_elapsed;
-      ns_total_InNode_time = ns_elapsed;
+      elapsed_ns = executeCpuParallelTasks(N, NUM_TASKS, final_count);
+      computed_ns = elapsed_ns;
+      total_InNode_time_ns = elapsed_ns;
       if (final_count > 1)
-         ns_inter_completion_time =
-            (ns_elapsed / final_count) * (final_count - 1);
+         inter_completion_time_ns =
+            (elapsed_ns / final_count) * (final_count - 1);
 
    } else if (device_type == "gpu") {
       auto accelerator =
          std::make_unique<GpuAccelerator>(kernel_path, kernel_name);
-      runAcceleratorPipeline(N, NUM_TASKS, accelerator.get(), ns_elapsed,
-                             ns_computed, ns_total_InNode_time,
-                             ns_inter_completion_time, final_count);
+      runAcceleratorPipeline(N, NUM_TASKS, accelerator.get(), elapsed_ns,
+                             computed_ns, total_InNode_time_ns,
+                             inter_completion_time_ns, final_count);
 
    } else if (device_type == "fpga") {
       auto accelerator =
          std::make_unique<FpgaAccelerator>(kernel_path, kernel_name);
-      runAcceleratorPipeline(N, NUM_TASKS, accelerator.get(), ns_elapsed,
-                             ns_computed, ns_total_InNode_time,
-                             ns_inter_completion_time, final_count);
+      runAcceleratorPipeline(N, NUM_TASKS, accelerator.get(), elapsed_ns,
+                             computed_ns, total_InNode_time_ns,
+                             inter_completion_time_ns, final_count);
 
    } else {
       std::cerr << "[ERROR] Invalid device type '" << device_type << "'.\n\n";
@@ -163,8 +163,9 @@ int main(int argc, char *argv[]) {
       return -1;
    }
 
-   print_stats(N, NUM_TASKS, device_type, kernel_name, ns_elapsed, ns_computed,
-               ns_total_InNode_time, ns_inter_completion_time, final_count);
+   calculate_and_print_metrics(N, NUM_TASKS, device_type, kernel_name,
+                               elapsed_ns, computed_ns, total_InNode_time_ns,
+                               inter_completion_time_ns, final_count);
 
    return 0;
 }

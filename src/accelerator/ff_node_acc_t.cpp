@@ -134,9 +134,9 @@ void ff_node_acc_t::consumerLoop() {
       }
       last_completion_time = end_time;
 
-      // Aggiorna le statistiche sull'oggetto esterno.
+      // Aggiorna le statistiche.
       stats_->computed_ns += current_task_ns;
-      stats_->ns_total_InNode_time += inNode_duration.count();
+      stats_->total_InNode_time_ns += inNode_duration.count();
       stats_->tasks_processed++;
 
       accelerator_->release_buffer_set(task->buffer_idx);
