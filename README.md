@@ -15,7 +15,7 @@ cmake -B build && cmake --build build
 ```
 
 ### Esecuzione
-L'eseguibile accetta tre argomenti opzionali: [N] [NUM_TASKS] [DEVICE].
+L'eseguibile accetta tre argomenti opzionali: [N] [NUM_TASKS] [DEVICE] [KERNEL_PATH].
 ```
 # Esecuzione su CPU (parallela)
 ./build/tesi-exec 1000000 100 cpu
@@ -35,11 +35,14 @@ cmake -B build && cmake --build build
 ```
 
 ### Esecuzione
-L'eseguibile accetta tre argomenti opzionali: [N] [NUM_TASKS] [DEVICE].
+L'eseguibile accetta tre argomenti opzionali: [N] [NUM_TASKS] [DEVICE] [KERNEL_PATH].
 ```
 # Esecuzione su CPU (parallela)
 ./build/tesi-exec 16777216 100 cpu
 
-# Esecuzione su GPU
-./build/tesi-exec 16777216 100 gpu
+# Esecuzione su GPU (OpenCL)
+./build/tesi-exec 16777216 100 gpu_opencl
+
+# Esecuzione su GPU (Metal)
+./build/tesi-exec 16777216 100 gpu_metal
 ```
