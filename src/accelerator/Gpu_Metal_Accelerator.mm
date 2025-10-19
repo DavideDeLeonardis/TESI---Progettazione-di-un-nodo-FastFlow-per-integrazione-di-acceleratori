@@ -48,8 +48,8 @@ class MetalBufferManager {
          return true;
 
       allocated_size_bytes_ = required_size_bytes;
-      // Su Apple Silicon la memoria è condivisa tra CPU e GPU, quindi possiamo
-      // accedere agli stessi dati senza copie esplicite sul bus PCIe.
+      // Su Apple Silicon la memoria è condivisa tra CPU e GPU, quindi possiamo accedere agli stessi
+      // dati senza copie esplicite sul bus PCIe.
       MTLResourceOptions options = MTLResourceStorageModeShared;
 
       for (size_t i = 0; i < POOL_SIZE; ++i) {
@@ -88,8 +88,7 @@ class MetalBufferManager {
    }
 
    /**
-    * Rilascia un indice di buffer nel pool e notifica i thread in
-    * attesa.
+    * Rilascia un indice di buffer nel pool e notifica i thread in attesa.
     */
    void release_buffer_set(size_t index) {
       {
@@ -122,8 +121,8 @@ Gpu_Metal_Accelerator::Gpu_Metal_Accelerator(const std::string &kernel_path,
     : kernel_path_(kernel_path), kernel_name_(kernel_name) {}
 
 /**
- * Il distruttore usa __bridge_transfer per passare la proprietà dei puntatori C
- * di nuovo ad ARC, che li rilascerà correttamente.
+ * Il distruttore usa __bridge_transfer per passare la proprietà dei puntatori C di nuovo ad ARC,
+ * che li rilascerà correttamente.
  */
 Gpu_Metal_Accelerator::~Gpu_Metal_Accelerator() {
    if (pipeline_state_)
@@ -158,8 +157,7 @@ bool Gpu_Metal_Accelerator::initialize() {
       exit(EXIT_FAILURE);
    }
 
-   // Chiama il costruttore di MetalBufferManager che iniializza il pool di
-   // buffer.
+   // Chiama il costruttore di MetalBufferManager che inializza il pool di buffer.
    buffer_manager_ = std::make_unique<MetalBufferManager>(dev);
 
    // Legge il kernel Metal e verifica che il percorso sia un file valido.
@@ -222,8 +220,8 @@ void Gpu_Metal_Accelerator::send_data_to_device(void *task_context) {
    std::cerr << "[Gpu_Metal_Accelerator - START] Processing task " << task->id
              << " with N=" << task->n << "...\n";
 
-   // Se la dimensione richiesta è diversa da quella allocata, rialloca
-   // tutti i buffer del pool e ottieni il set di buffer.
+   // Se la dimensione richiesta è diversa da quella allocata, rialloca tutti i buffer del pool e
+   // ottieni il set di buffer.
    size_t required_size_bytes = sizeof(int) * task->n;
    buffer_manager_->reallocate_buffers_if_needed(required_size_bytes);
    auto &current_buffers = buffer_manager_->get_buffer_set(task->buffer_idx);
@@ -237,8 +235,7 @@ void Gpu_Metal_Accelerator::execute_kernel(void *task_context) {
    auto *task = static_cast<Task *>(task_context);
    auto &current_buffers = buffer_manager_->get_buffer_set(task->buffer_idx);
 
-   // "Prende in prestito" i puntatori agli oggetti Metal per usarli in questa
-   // funzione.
+   // "Prende in prestito" i puntatori agli oggetti Metal per usarli in questa funzione.
    id<MTLCommandQueue> queue = (__bridge id<MTLCommandQueue>)command_queue_;
    id<MTLComputePipelineState> pso = (__bridge id<MTLComputePipelineState>)pipeline_state_;
 
