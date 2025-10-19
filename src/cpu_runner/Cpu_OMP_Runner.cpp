@@ -30,6 +30,7 @@ long long executeCpu_OMP_Tasks(size_t N, size_t NUM_TASKS, size_t &tasks_complet
 // Dice al compilatore di parallelizzare il ciclo for distribuendolo tra i thread disponibili.
 #pragma omp parallel for
       for (long i = 0; i < N; ++i) {
+         // Calcolo 2a² + 3a³ - 4b² + 5b⁵
          long long val_a = a[i];
          long long val_b = b[i];
 

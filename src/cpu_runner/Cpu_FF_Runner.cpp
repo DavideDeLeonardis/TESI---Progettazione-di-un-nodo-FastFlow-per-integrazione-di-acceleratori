@@ -30,6 +30,7 @@ long long executeCpu_FF_Tasks(size_t N, size_t NUM_TASKS, size_t &tasks_complete
       // Parallelizza il calcolo usando dell'operazione polinomiale usando ff_parallel_for
       // che gestisce il parallelismo a dati su CPU.
       pf.parallel_for(0, N, 1, 0, [&](const long i) {
+         // Calcolo 2a² + 3a³ - 4b² + 5b⁵
          long long val_a = a[i];
          long long val_b = b[i];
 
