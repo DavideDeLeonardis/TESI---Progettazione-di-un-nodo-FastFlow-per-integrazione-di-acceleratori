@@ -100,10 +100,7 @@ void runAcceleratorPipeline(size_t N, size_t NUM_TASKS, IAccelerator *accelerato
    // Avvio della pipeline e attesa del completamento.
    if (pipe.run_and_wait_end() < 0) {
       std::cerr << "[ERROR] Main: Pipeline execution failed.\n";
-      elapsed_ns = 0;
-      computed_ns = 0;
-      final_count = 0;
-      return;
+      exit(EXIT_FAILURE);
    }
    auto t1 = std::chrono::steady_clock::now();
    std::cout << "[Main] FF Pipeline execution finished.\n";

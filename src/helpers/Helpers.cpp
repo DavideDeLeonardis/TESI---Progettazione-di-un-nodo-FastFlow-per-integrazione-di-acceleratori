@@ -100,7 +100,9 @@ void print_usage(const char *prog_name) {
              << " 16777216 100 gpu_opencl kernels/gpu/polynomial_op.cl\n";
 }
 
-// Helper per stampare le statistiche finali.
+/**
+ * Helper per calcolare e stampare le statistiche finali.
+ */
 void calculate_and_print_metrics(size_t N, size_t NUM_TASKS, const std::string &device_type,
                                  std::string &kernel_name, long long elapsed_ns,
                                  long long computed_ns, long long total_InNode_time_ns,
@@ -111,15 +113,16 @@ void calculate_and_print_metrics(size_t N, size_t NUM_TASKS, const std::string &
              << "PERFORMANCE METRICS on " << device_type << "\n   (N=" << N
              << ", Tasks=" << final_count;
 
-   if (!kernel_name.empty())
-      std::cout << ", Kernel=" << kernel_name;
-
    if (device_type == "cpu_ff" || device_type == "cpu_omp") {
       double elapsed_s = elapsed_ns / 1.0e9;
+      // Tempo medio per task.
       double avg_task_time_ms = (elapsed_ns / final_count) / 1.0e6;
+      // Task totali processati al secondo.
       double throughput = (elapsed_s > 0) ? (final_count / elapsed_s) : 0;
 
-      std::cout << ")\n------------------------------------------------------------------\n"
+      std::cout << ", "
+                   "Kernel=polynomial_operation)\n-------------------------------------------------"
+                   "-----------------\n"
                 << "Avg Time per Task: " << avg_task_time_ms << " ms/task\n"
                 << "   (Tempo medio per completare un singolo task in modo sequenziale)\n\n"
                 << "Throughput: " << throughput << " tasks/sec\n"
@@ -146,7 +149,8 @@ void calculate_and_print_metrics(size_t N, size_t NUM_TASKS, const std::string &
       // Task totali processati al secondo.
       double throughput = (elapsed_s > 0) ? (final_count / elapsed_s) : 0;
 
-      std::cout << ")\n------------------------------------------------------------------"
+      std::cout << ", Kernel=" << kernel_name
+                << ")\n------------------------------------------------------------------"
                    "\n"
                 << "Avg Service Time: " << avg_service_time_ms << " ms/task\n"
                 << "   (Tempo medio tra il completamento di due task consecutivi)\n\n"
