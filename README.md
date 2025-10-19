@@ -1,7 +1,7 @@
 # Progettazione di un nodo FastFlow per integrazione di acceleratori
 
 <br>
-Ci sono 3 kernel disponibili per GPU e FPGA, per CPU è disponibile solo l'operazione polinomiale, che è l'operazione inserita di default su ogni dispositivo.
+Sono disponibili 3 kernel per GPU e FPGA, per CPU è disponibile solo l'operazione polinomiale.
 <br>
 Il testing è fatto per CPU con FF, CPU con OpenMP, GPU con OpenCL, GPU con Metal e FPGA con il kernel polynomial_op.
 <br>
@@ -27,6 +27,9 @@ cmake -B build && cmake --build build
 L'eseguibile accetta tre argomenti opzionali: [N] [NUM_TASKS] [DEVICE] [KERNEL_PATH].
 
 ```
+# Esecuzione su CPU (con ff::parallel_for)
+./build/tesi-exec 1000000 100 cpu_ff
+
 # Esecuzione su CPU (con OpenMP)
 ./build/tesi-exec 1000000 100 cpu_omp
 
