@@ -163,8 +163,9 @@ int main(int argc, char *argv[]) {
       return -1;
    }
 
-   calculate_and_print_metrics(N, NUM_TASKS, device_type, kernel_name, elapsed_ns, computed_ns,
-                               total_InNode_time_ns, inter_completion_time_ns, final_count);
+   PerformanceData metrics = calculate_metrics(elapsed_ns, computed_ns, total_InNode_time_ns,
+                                               inter_completion_time_ns, final_count);
+   print_metrics(N, NUM_TASKS, device_type, kernel_name, metrics, final_count);
 
    return 0;
 }
