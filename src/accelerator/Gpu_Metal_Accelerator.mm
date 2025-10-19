@@ -12,7 +12,7 @@
 
 /**
  *
- * File contente GPU Metal Accelerator e Buffer Manager specifico per Metal.
+ * File contente GPU Metal Accelerator e Buffer Manager specifico per il framework Metal.
  *
  */
 
