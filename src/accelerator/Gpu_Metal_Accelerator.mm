@@ -138,7 +138,7 @@ Gpu_Metal_Accelerator::~Gpu_Metal_Accelerator() {
       id<MTLDevice> dev = (__bridge_transfer id<MTLDevice>)device_;
    buffer_manager_.reset();
 
-   std::cerr << "[Gpu_Metal_Accelerator] Metal resources released.\n";
+   std::cerr << "[Gpu_Metal_Accelerator] Destroyed and Metal resources released.\n";
 }
 
 bool Gpu_Metal_Accelerator::initialize() {
@@ -281,8 +281,10 @@ void Gpu_Metal_Accelerator::get_results_from_device(void *task_context, long lon
 
    auto t0 = std::chrono::steady_clock::now();
 
-   // Attende il completamento del kernel (op. bloccante).
+   // Attende il completamento del kernel (op. bloccante ma va bene perchè il consumerLoop ha un
+   // solo e unico scopo: aspettare che la GPU finisca e poi copiare i dati).
    [command_buffer waitUntilCompleted];
+
    auto t1 = std::chrono::steady_clock::now();
    computed_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
 

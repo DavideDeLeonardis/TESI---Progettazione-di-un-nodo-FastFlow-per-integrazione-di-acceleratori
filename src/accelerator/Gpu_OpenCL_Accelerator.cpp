@@ -45,7 +45,7 @@ Gpu_OpenCL_Accelerator::~Gpu_OpenCL_Accelerator() {
    if (context_)
       clReleaseContext(context_);
 
-   std::cerr << "[GpuAccelerator] Destroyed and OpenCL resources released.\n";
+   std::cerr << "[Gpu_OpenCL_Accelerator] Destroyed and OpenCL resources released.\n";
 }
 
 /**
@@ -71,14 +71,14 @@ bool Gpu_OpenCL_Accelerator::initialize() {
    // Crea un contesto OpenCL.
    context_ = clCreateContext(NULL, 1, &device_id, NULL, NULL, &ret);
    if (!context_ || ret != CL_SUCCESS) {
-      std::cerr << "[ERROR] GpuAccelerator: Failed to create OpenCL context.\n";
+      std::cerr << "[ERROR] Gpu_OpenCL_Accelerator: Failed to create OpenCL context.\n";
       return false;
    }
 
    // Crea la coda di comandi.
    queue_ = clCreateCommandQueue(context_, device_id, 0, &ret);
    if (!queue_ || ret != CL_SUCCESS) {
-      std::cerr << "[ERROR] GpuAccelerator: Failed to create command queue.\n";
+      std::cerr << "[ERROR] Gpu_OpenCL_Accelerator: Failed to create command queue.\n";
       return false;
    }
 
@@ -93,8 +93,8 @@ bool Gpu_OpenCL_Accelerator::initialize() {
    if (!kernelFile.is_open() ||
        !std::filesystem::is_regular_file(kernel_path_) ||
        kernel_path_.rfind(".cl") == std::string::npos) {
-      std::cerr << "[ERROR] GpuAccelerator: Could not open kernel file: "
-                << kernel_path_ << "\n";
+      std::cerr << "[ERROR] Gpu_OpenCL_Accelerator: Could not open kernel file: " << kernel_path_
+                << "\n";
       exit(EXIT_FAILURE);
    }
    std::string kernelSource((std::istreambuf_iterator<char>(kernelFile)),
@@ -106,14 +106,15 @@ bool Gpu_OpenCL_Accelerator::initialize() {
    program_ =
       clCreateProgramWithSource(context_, 1, &source_str, &source_size, &ret);
    if (!program_ || ret != CL_SUCCESS) {
-      std::cerr << "[ERROR] GpuAccelerator: Failed to create program.\n";
+      std::cerr << "[ERROR] Gpu_OpenCL_Accelerator: Failed to create program.\n";
       exit(EXIT_FAILURE);
    }
 
    // Compila il programma OpenCL.
    ret = clBuildProgram(program_, 1, &device_id, NULL, NULL, NULL);
    if (ret != CL_SUCCESS) {
-      std::cerr << "[ERROR] GpuAccelerator: Kernel compilation failed.\n";
+      std::cerr << "[ERROR] Gpu_OpenCL_Accelerator: Kernel "
+                   "compilation failed.\n";
       size_t log_size;
       clGetProgramBuildInfo(program_, device_id, CL_PROGRAM_BUILD_LOG, 0, NULL,
                             &log_size);
@@ -126,11 +127,11 @@ bool Gpu_OpenCL_Accelerator::initialize() {
    // Crea l'oggetto kernel.
    kernel_ = clCreateKernel(program_, kernel_name_.c_str(), &ret);
    if (!kernel_ || ret != CL_SUCCESS) {
-      std::cerr << "[ERROR] GpuAccelerator: Failed to create kernel object.\n";
+      std::cerr << "[ERROR] Gpu_OpenCL_Accelerator: Failed to create kernel object.\n";
       exit(EXIT_FAILURE);
    }
 
-   std::cerr << "[GpuAccelerator] Initialization successful.\n";
+   std::cerr << "[Gpu_OpenCL_Accelerator] Initialization successful.\n";
    return true;
 }
 
@@ -153,7 +154,7 @@ void Gpu_OpenCL_Accelerator::send_data_to_device(void *task_context) {
    cl_int ret; // Codice di ritorno delle chiamate OpenCL
    auto *task = static_cast<Task *>(task_context);
 
-   std::cerr << "[GpuAccelerator - START] Processing task " << task->id
+   std::cerr << "[Gpu_OpenCL_Accelerator - START] Processing task " << task->id
              << " with N=" << task->n << "...\n";
 
    // Se la dimensione richiesta è diversa da quella allocata, rialloca
@@ -244,5 +245,5 @@ void Gpu_OpenCL_Accelerator::get_results_from_device(void *task_context,
    computed_ns =
       std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
 
-   std::cerr << "[GpuAccelerator - END] Task " << task->id << " finished.\n";
+   std::cerr << "[Gpu_OpenCL_Accelerator - END] Task " << task->id << " finished.\n";
 }
