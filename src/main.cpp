@@ -23,6 +23,10 @@
  * Il nodo Emitter genera i Task da far processare al nodo ff_node_acc_t.
  * Inizializza i dati di input una sola volta, poi crea dinamicamente un nuovo
  * oggetto Task per ogni richiesta dalla pipeline.
+ *
+ * !! Stiamo eseguendo i task in parallelo sull'acceleratore, ma stiamo serializzando la
+ * !! finalizzazione e il download, e ciò che ci permette di riutilizzare lo stesso buffer di
+ * !! output.
  */
 class Emitter : public ff_node {
  public:
