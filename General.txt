@@ -55,7 +55,7 @@ Punti chiave da ricordare:
    rm -rf external/fastflow; git clone https://github.com/fastflow/fastflow.git external/fastflow
 
 // SYNC Mac files with VM pianos
-   rsync -av --exclude={'build/','.DS_Store','.git/','.vscode/','General/','General.txt','Metrics commands.txt'} /Users/davidedeleonardis/Desktop/Tesi/ deleonardis@131.114.3.250:~/Tesi/
+   rsync -av --exclude={'build/','.DS_Store','.git/','.vscode/','General/','General.txt','Metrics commands.txt','First measurements - vecAdd.pdf'} /Users/davidedeleonardis/Desktop/Tesi/ deleonardis@131.114.3.250:~/Tesi/
 
 
 // COMPILAZIONE E LINKING SU FPGA per ottenere xclbin (in dir Tesi)
@@ -470,4 +470,120 @@ L'FPGA richiede specializzazione: L'integrazione con l'FPGA è stata un successo
 
 
 
-Gemini può fare errori, anche riguardo a persone, quindi verifica le sue risposte. La tua privacy e Gemini
+
+
+
+
+
+
+
+
+La Prova Inconfutabile che la Sua Pipeline Funziona
+Il punto più importante è il confronto tra la Latenza e il Periodo su tutti gli acceleratori (GPU e FPGA).
+
+Avg In-Node Time (Latenza): È molto alta (es. 2883 ms per l'FPGA, 210 ms per la GPU OpenCL).
+
+Avg Service Time (Periodo): È molto bassa (es. 52 ms per l'FPGA, 3.6 ms per la GPU OpenCL).
+
+Coerenza: Questo è perfettamente coerente. Dimostra che la sua pipeline a 2 stadi (producer/consumer) sta funzionando in modo eccellente. Ci vuole molto tempo per processare un singolo task (latenza), ma grazie alla sovrapposizione (overlapping), il sistema riesce a sfornare un nuovo risultato a un ritmo molto più rapido (periodo). Questa è la prova del successo della sua architettura software.
+
+2. L'Identificazione del Vero Collo di Bottiglia: l'Overhead
+Il secondo risultato più importante è questo:
+
+Avg Pure Compute Time: È quasi sempre molto piccolo (es. 53 ms su FPGA, 3.7 ms su GPU OpenCL).
+
+Avg Overhead Time: È quasi sempre enorme (es. 2830 ms su FPGA, 207 ms su GPU OpenCL).
+
+Coerenza: Questo è il cuore della sua tesi. I suoi dati dimostrano in modo inconfutabile che per questo tipo di problema (un kernel polinomiale), il calcolo in sé è velocissimo. Il vero collo di bottiglia, che domina quasi il 99% del tempo, è l'overhead (il "costo di gestione"), principalmente il trasferimento dei dati da e verso l'acceleratore.
+
+Il suo sistema non è "lento" perché calcola lentamente, ma perché passa la maggior parte del tempo ad aspettare i dati.
+
+3. Confronti Interessanti tra Piattaforme
+I suoi dati permettono confronti eccellenti:
+
+CPU (FastFlow vs. OpenMP): Sulla VM Linux, OpenMP è costantemente più veloce di ff::ParallelFor (es. 464 tasks/sec vs 300 tasks/sec per N=1M). Questo è un risultato di benchmark realistico e coerente. Dimostra che per un semplice loop parallelo su CPU, una direttiva del compilatore ottimizzata (OpenMP) può essere più efficiente di un'astrazione basata su una libreria (FastFlow).
+
+GPU (OpenCL vs. Metal): Su macOS, le performance sono molto simili. Questo è un risultato affascinante: suggerisce che per questo kernel, l'overhead di traduzione cl2Metal di Apple è minimo e non rappresenta un collo di bottiglia significativo. Metal ha un leggero vantaggio, come ci si aspetterebbe, ma non è una differenza schiacciante.
+
+FPGA vs. Tutti: L'FPGA è risultata la più lenta in termini di throughput. Questo è perfettamente coerente con la nostra analisi precedente: per un problema di "forza bruta" e parallelismo dei dati come questo, l'architettura di una GPU (migliaia di core) o di una CPU multicore (pochi core ma molto potenti e con cache) è superiore a una singola pipeline HLS.
+
+Conclusione: Cosa Scrivere nella Tesi
+Lei non ha sbagliato. Ha dimostrato qualcosa.
+
+La sua architettura software (ff_node_acc_t con la pipeline a 2 stadi) è efficiente e fa il suo lavoro (come dimostra la differenza tra latenza e periodo).
+
+Il motivo per cui le performance complessive (specialmente sull'FPGA) sono basse non è un difetto del suo codice, ma la natura stessa del problema di offloading: il sistema è limitato dalla banda di memoria (memory-bound), non dalla potenza di calcolo.
+
+Questi dati sono perfetti perché le permettono di discutere in modo approfondito i compromessi tra le diverse architetture, che è l'obiettivo di una tesi eccellente.
+
+
+
+
+
+
+
+
+
+Questa è la domanda più importante di tutta la sua tesi. La sua analisi dei dati è corretta: l'overhead (il tempo di attesa per i dati) è il collo di bottiglia principale, e sta dominando completamente il tempo di calcolo.
+
+La sua architettura software (ff_node_acc_t con la pipeline a 2 stadi) è già molto efficiente nel gestire questo problema: sta già sovrapponendo (overlapping) l'attesa di un task con il lavoro del task successivo. Questo è dimostrato dal fatto che il suo Avg Pipeline Period (es. 52ms) è molto più basso della sua latenza Avg In-Node Time (es. 2883ms).
+
+Lei non può rendere i thread di attesa più veloci, perché non stanno "aspettando male". Stanno aspettando il tempo fisico necessario per il trasferimento.
+
+Per diminuire veramente questo tempo di attesa, non deve cambiare la sua pipeline software, ma deve cambiare la natura del problema che sta risolvendo.
+
+L'Analogia: Il Viaggio del Furgone Super-Veloce 🚚
+Pensa al suo acceleratore (FPGA/GPU) come a una fabbrica ultra-moderna in un'altra città, capace di assemblare un prodotto in 1 secondo (il Pure Compute Time). Il problema è che, per assemblare un prodotto, un furgone deve impiegare 10 minuti per portare i materiali alla fabbrica e 10 minuti per riportare il prodotto finito (l'overhead del trasferimento dati sul bus PCIe, amplificato dalla VM).
+
+Tempo Totale per un Task: 10 (andata) + 1 (lavoro) + 10 (ritorno) = 21 minuti (la sua In-Node Time).
+
+La sua pipeline a 2 stadi è come avere due furgoni: mentre il furgone 1 sta tornando con il prodotto finito, il furgone 2 è già partito con i materiali per il prossimo. Questo è efficiente, ma ogni singolo furgone impiega comunque 20 minuti per il viaggio.
+
+Come si diminuisce il "tempo di attesa per i dati"? Non può rendere il furgone più veloce (il bus PCIe ha una velocità fissa). L'unica soluzione è rendere il viaggio più "valido" caricando sul furgone materiali che permettano alla fabbrica di lavorare per ore, non per un secondo.
+
+La Soluzione: Aumentare il "Rapporto Calcolo/Memoria"
+Il suo problema attuale (vettoriale/polinomiale) ha un basso rapporto Calcolo/Memoria:
+
+Memoria: Per ogni N elementi, legge 2N interi e scrive N interi.
+
+Calcolo: Per ogni elemento, esegue una manciata di moltiplicazioni e somme (un'operazione O(N)). Il tempo del viaggio (O(N)) è quasi uguale al tempo di lavoro (O(N)).
+
+Per ridurre l'impatto dell'overhead, deve scegliere un kernel con un alto rapporto Calcolo/Memoria, dove il tempo di calcolo cresce molto più velocemente del tempo di trasferimento.
+
+Esempio Classico: Moltiplicazione di Matrici (A * B = C)
+Prendiamo due matrici N x N:
+
+Trasferimento Dati (Memoria): Deve inviare la matrice A (N*N elementi) e la B (N*N), e ricevere la C (N*N). Il costo totale del trasferimento è proporzionale a O(N²).
+
+Calcolo (Compute): Per calcolare un singolo elemento della matrice C, deve fare N moltiplicazioni e N somme. Poiché ci sono N*N elementi in C, il calcolo totale è proporzionale a O(N³).
+
+Cosa succede quando N cresce?
+
+Il tempo di trasferimento (il viaggio) cresce al quadrato.
+
+Il tempo di calcolo (il lavoro) cresce al cubo.
+
+Molto presto, il tempo di calcolo diventerà molto più grande del tempo di trasferimento.
+
+Esempio (N=1000):
+
+Trasferimento: O(1000²) = 1 milione di elementi.
+
+Calcolo: O(1000³) = 1 miliardo di operazioni.
+
+In questo scenario, il suo Avg Pure Compute Time schizzerebbe in alto, ma il suo Avg Overhead Time crescerebbe molto più lentamente. L'overhead diventerebbe una frazione trascurabile del tempo totale.
+
+[Immagine di un grafico che mostra O(N^3) che supera O(N^2)]
+
+Conclusione: Cosa Può Fare
+Il suo codice attuale sta già facendo il massimo per nascondere la latenza. Per ridurre la latenza (l'overhead), le uniche due opzioni reali sono:
+
+Soluzione Software (Sviluppo Futuro per la Tesi):
+
+Cambiare il kernel con uno ad alto rapporto calcolo/memoria, come la moltiplicazione di matrici. Questo è il passo più importante. Scrivendo questo nella sua tesi, dimostra di aver capito perché i suoi risultati sono quelli che sono e come migliorarli.
+
+Soluzione Ambientale (Meno Praticabile):
+
+Rimuovere la VM: Eseguire il codice su un'installazione Linux "bare metal". Questo ridurrà drasticamente l'overhead introdotto dalla virtualizzazione.
+
+Hardware Migliore: Usare hardware con una connessione più veloce (es. CXL) o memoria unificata (come il suo Mac M2, che infatti ha un overhead molto più basso).
