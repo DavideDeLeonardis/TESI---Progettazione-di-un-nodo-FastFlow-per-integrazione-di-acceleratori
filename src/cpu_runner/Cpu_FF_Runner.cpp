@@ -5,7 +5,7 @@
 
 /**
  * @brief Esegue i task di un calcolo specificato da command line in parallelo su tutti i core della
- * CPU utilizzando FastFlow parallel_for.
+ * CPU utilizzando il parallel_for di FastFlow.
  */
 long long executeCpu_FF_Tasks(size_t N, size_t NUM_TASKS, const std::string &kernel_name,
                               size_t &tasks_completed) {

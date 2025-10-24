@@ -5,7 +5,7 @@
 
 /**
  * @brief Esegue i task di un'operazione polinomiale complessa (2a² + 3a³ - 4b² + 5b⁵) in parallelo
- * su tutti i core della CPU utilizzando FastFlow parallel_for.
+ * su tutti i core della CPU utilizzando il parallel_for di FastFlow.
  *
  * @param N La dimensione dei vettori per ogni task.
  * @param NUM_TASKS Il numero totale di task da eseguire in sequenza.
