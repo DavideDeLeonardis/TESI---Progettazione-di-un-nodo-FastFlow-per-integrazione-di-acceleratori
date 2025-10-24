@@ -1,79 +1,103 @@
 //
-// VM Pianosa, 100 task
-//
-
-Benchmark con N = 10000
-   # --- CPU ---
-   ./build/tesi-exec 10000 100 cpu_ff
-   ./build/tesi-exec 10000 100 cpu_omp
-
-   # --- FPGA ---
-   # Test con il kernel polinomiale
-   ./build/tesi-exec 10000 100 fpga kernels/fpga/krnl_vadd.xclbin
-   ./build/tesi-exec 10000 100 fpga kernels/fpga/krnl_polynomial_op.xclbin
-
-
-Benchmark con N = 1,000,000
-   # --- CPU ---
-   ./build/tesi-exec 1000000 100 cpu_ff
-   ./build/tesi-exec 1000000 100 cpu_omp
-
-   # --- FPGA ---
-   # Test con il kernel polinomiale
-   ./build/tesi-exec 1000000 100 fpga kernels/fpga/krnl_vadd.xclbin
-   ./build/tesi-exec 1000000 100 fpga kernels/fpga/krnl_polynomial_op.xclbin
-
-
-Benchmark con N = 7,449,999 (Limite FPGA)
-   # --- CPU ---
-   ./build/tesi-exec 7449999 100 cpu_ff
-   ./build/tesi-exec 7449999 100 cpu_omp
-
-   # --- FPGA ---
-   # Test con il kernel polinomiale
-   ./build/tesi-exec 7449999 100 fpga kernels/fpga/krnl_vadd.xclbin
-   ./build/tesi-exec 7449999 100 fpga kernels/fpga/krnl_polynomial_op.xclbin
-
-
-
-//
 // MacOS
 //
 
-Benchmark con N = 10000
-   # --- CPU ---
-   ./build/tesi-exec 10000 100 cpu_ff
+Benchmark con N = 10000 (100 task)
+   # --- CPU (FastFlow) ---
+   ./build/tesi-exec 10000 100 cpu_ff vecAdd
+   ./build/tesi-exec 10000 100 cpu_ff polynomial_op
+   ./build/tesi-exec 10000 100 cpu_ff heavy_compute_kernel
 
    # --- GPU (OpenCL) ---
    ./build/tesi-exec 10000 100 gpu_opencl kernels/gpu/vecAdd.cl
    ./build/tesi-exec 10000 100 gpu_opencl kernels/gpu/polynomial_op.cl
+   ./build/tesi-exec 10000 100 gpu_opencl kernels/gpu/heavy_compute_kernel.cl
 
    # --- GPU (Metal) ---
-   ./build/tesi-exec 10000 100 gpu_metal kernels/gpu/vecAdd.metal
-   ./build/tesi-exec 10000 100 gpu_metal kernels/gpu/polynomial_op.metal
+   ./build/tesi-exec 10000 100 gpu_metal kernels/metal/vecAdd.metal
+   ./build/tesi-exec 10000 100 gpu_metal kernels/metal/polynomial_op.metal
+   ./build/tesi-exec 10000 100 gpu_metal kernels/metal/heavy_compute_kernel.metal
 
-
-Benchmark con N = 1,000,000
-   # --- CPU ---
-   ./build/tesi-exec 1000000 100 cpu_ff
+Benchmark con N = 1,000,000 (100 task)
+   # --- CPU (FastFlow) ---
+   ./build/tesi-exec 1000000 100 cpu_ff vecAdd
+   ./build/tesi-exec 1000000 100 cpu_ff polynomial_op
+   ./build/tesi-exec 1000000 100 cpu_ff heavy_compute_kernel
 
    # --- GPU (OpenCL) ---
    ./build/tesi-exec 1000000 100 gpu_opencl kernels/gpu/vecAdd.cl
    ./build/tesi-exec 1000000 100 gpu_opencl kernels/gpu/polynomial_op.cl
+   ./build/tesi-exec 1000000 100 gpu_opencl kernels/gpu/heavy_compute_kernel.cl
 
    # --- GPU (Metal) ---
-   ./build/tesi-exec 1000000 100 gpu_metal kernels/gpu/vecAdd.metal
-   ./build/tesi-exec 1000000 100 gpu_metal kernels/gpu/polynomial_op.metal
+   ./build/tesi-exec 1000000 100 gpu_metal kernels/metal/vecAdd.metal
+   ./build/tesi-exec 1000000 100 gpu_metal kernels/metal/polynomial_op.metal
+   ./build/tesi-exec 1000000 100 gpu_metal kernels/metal/heavy_compute_kernel.metal
 
-
-Benchmark con N = 7,449,999
-   # --- CPU ---
-   ./build/tesi-exec 7449999 100 cpu_ff
+Benchmark con N = 7,449,999 (100 task)
+   # --- CPU (FastFlow) ---
+   ./build/tesi-exec 7449999 100 cpu_ff vecAdd
+   ./build/tesi-exec 7449999 100 cpu_ff polynomial_op
+   ./build/tesi-exec 7449999 100 cpu_ff heavy_compute_kernel
 
    # --- GPU (OpenCL) ---
    ./build/tesi-exec 7449999 100 gpu_opencl kernels/gpu/vecAdd.cl
    ./build/tesi-exec 7449999 100 gpu_opencl kernels/gpu/polynomial_op.cl
+   ./build/tesi-exec 7449999 100 gpu_opencl kernels/gpu/heavy_compute_kernel.cl
 
    # --- GPU (Metal) ---
-   ./build/tesi-exec 7449999 100 gpu_metal kernels/gpu/vecAdd.metal
-   ./build/tesi-exec 7449999 100 gpu_metal kernels/gpu/polynomial_op.metal
+   ./build/tesi-exec 7449999 100 gpu_metal kernels/metal/vecAdd.metal
+   ./build/tesi-exec 7449999 100 gpu_metal kernels/metal/polynomial_op.metal
+   ./build/tesi-exec 7449999 100 gpu_metal kernels/metal/heavy_compute_kernel.metal
+
+//
+// VM Pianosa Linux
+//
+
+Benchmark con N = 10000 (100 task)
+   # --- CPU (FastFlow) ---
+   ./build/tesi-exec 10000 100 cpu_ff vecAdd
+   ./build/tesi-exec 10000 100 cpu_ff polynomial_op
+   ./build/tesi-exec 10000 100 cpu_ff heavy_compute_kernel
+
+   # --- CPU (OpenMP) ---
+   ./build/tesi-exec 10000 100 cpu_omp vecAdd
+   ./build/tesi-exec 10000 100 cpu_omp polynomial_op
+   ./build/tesi-exec 10000 100 cpu_omp heavy_compute_kernel
+
+   # --- FPGA ---
+   ./build/tesi-exec 10000 100 fpga kernels/fpga/krnl_vadd.xclbin
+   ./build/tesi-exec 10000 100 fpga kernels/fpga/krnl_polynomial_op.xclbin
+   ./build/tesi-exec 10000 100 fpga kernels/fpga/krnl_heavy_compute.xclbin
+
+Benchmark con N = 1,000,000 (100 task)
+   # --- CPU (FastFlow) ---
+   ./build/tesi-exec 1000000 100 cpu_ff vecAdd
+   ./build/tesi-exec 1000000 100 cpu_ff polynomial_op
+   ./build/tesi-exec 1000000 100 cpu_ff heavy_compute_kernel
+
+   # --- CPU (OpenMP) ---
+   ./build/tesi-exec 1000000 100 cpu_omp vecAdd
+   ./build/tesi-exec 1000000 100 cpu_omp polynomial_op
+   ./build/tesi-exec 1000000 100 cpu_omp heavy_compute_kernel
+
+   # --- FPGA ---
+   ./build/tesi-exec 1000000 100 fpga kernels/fpga/krnl_vadd.xclbin
+   ./build/tesi-exec 1000000 100 fpga kernels/fpga/krnl_polynomial_op.xclbin
+   ./build/tesi-exec 1000000 100 fpga kernels/fpga/krnl_heavy_compute.xclbin
+
+Benchmark con N = 7,449,999 (100 task)
+   # --- CPU (FastFlow) ---
+   ./build/tesi-exec 7449999 100 cpu_ff vecAdd
+   ./build/tesi-exec 7449999 100 cpu_ff polynomial_op
+   ./build/tesi-exec 7449999 100 cpu_ff heavy_compute_kernel
+
+   # --- CPU (OpenMP) ---
+   ./build/tesi-exec 7449999 100 cpu_omp vecAdd
+   ./build/tesi-exec 7449999 100 cpu_omp polynomial_op
+   ./build/tesi-exec 7449999 100 cpu_omp heavy_compute_kernel
+
+   # --- FPGA ---
+   ./build/tesi-exec 7449999 100 fpga kernels/fpga/krnl_vadd.xclbin
+   ./build/tesi-exec 7449999 100 fpga kernels/fpga/krnl_polynomial_op.xclbin
+   ./build/tesi-exec 7449999 100 fpga kernels/fpga/krnl_heavy_compute.xclbin
