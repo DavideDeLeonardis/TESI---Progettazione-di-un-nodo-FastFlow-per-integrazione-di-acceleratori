@@ -10,7 +10,7 @@
 long long executeCpu_FF_Tasks(size_t N, size_t NUM_TASKS, const std::string &kernel_name,
                               size_t &tasks_completed) {
 
-   // Controlliamo il nome del kernel.
+   // Validazione del kernel.
    if (kernel_name != "vecAdd" && kernel_name != "polynomial_op" &&
        kernel_name != "heavy_compute_kernel") {
       std::cerr
@@ -71,7 +71,7 @@ long long executeCpu_FF_Tasks(size_t N, size_t NUM_TASKS, const std::string &ker
             double val_b = (double)b[i];
             double result = 0.0;
 
-            for (int j = 0; j < 100; ++j)
+            for (int j = 0; j < 200; ++j)
                result += std::sin(val_a + j) * std::cos(val_b - j);
 
             c[i] = (int)result;
