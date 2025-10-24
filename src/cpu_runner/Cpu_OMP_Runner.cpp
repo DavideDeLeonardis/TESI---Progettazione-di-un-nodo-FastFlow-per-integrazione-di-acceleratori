@@ -21,8 +21,7 @@ long long executeCpu_OMP_Tasks(size_t N, size_t NUM_TASKS, const std::string &ke
       exit(EXIT_FAILURE);
    }
 
-   std::cout
-      << "[CPU OpenMP] Running polynomial operation tasks in PARALLEL on CPU with OpenMP.\n\n";
+   std::cout << "[CPU OpenMP] Running tasks in PARALLEL on all CPU cores with OpenMP.\n\n";
 
    // Inizializzazione dei dati.
    std::vector<int> a(N), b(N), c(N);

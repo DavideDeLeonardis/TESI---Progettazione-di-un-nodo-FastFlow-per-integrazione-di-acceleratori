@@ -19,8 +19,7 @@ long long executeCpu_FF_Tasks(size_t N, size_t NUM_TASKS, const std::string &ker
       exit(EXIT_FAILURE);
    }
 
-   std::cout << "[CPU Parallel FF] Running polynomial operation tasks in PARALLEL on CPU with "
-                "FastFlow.\n\n";
+   std::cout << "[CPU Parallel FF] Running tasks in PARALLEL on all CPU cores with FastFlow.\n\n";
 
    // Inizializzazione dei dati.
    std::vector<int> a(N), b(N), c(N);
