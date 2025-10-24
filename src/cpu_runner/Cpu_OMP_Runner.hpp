@@ -1,13 +1,17 @@
 #pragma once
 
 #include <cstddef>
+#include <string>
 
 /**
  * @brief Esegue i task di un'operazione polinomiale complessa (2a² + 3a³ - 4b² + 5b⁵) in parallelo
  * su tutti i core della CPU utilizzando le direttive OpenMP.
  * @param N La dimensione dei vettori per ogni task.
  * @param NUM_TASKS Il numero totale di task da eseguire.
+ * @param kernel_name Il nome del kernel da eseguire ("vecAdd", "polynomial_op" o
+ * "heavy_compute_kernel").
  * @param tasks_completed Riferimento per memorizzare il numero di task completati.
  * @return long long Il tempo totale trascorso in nanosecondi.
  */
-long long executeCpu_OMP_Tasks(size_t N, size_t NUM_TASKS, size_t &tasks_completed);
+long long executeCpu_OMP_Tasks(size_t N, size_t NUM_TASKS, const std::string &kernel_name,
+                               size_t &tasks_completed);
