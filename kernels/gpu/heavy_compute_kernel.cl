@@ -1,10 +1,8 @@
 /**
  * @brief Esegue un calcolo computazionalmente intensivo (compute-bound).
  *
- * Per ogni elemento, esegue un ciclo di 100 iterazioni di calcoli
+ * Per ogni elemento, esegue un ciclo di 200 iterazioni di calcoli
  * trigonometrici (sin, cos) per stressare le unità di calcolo.
- * Questo kernel è progettato per rendere il tempo di calcolo
- * significativamente più lungo dell'overhead di trasferimento dati.
  *
  * @param a Puntatore al primo vettore di input in memoria globale.
  * @param b Puntatore al secondo vettore di input in memoria globale.
@@ -25,7 +23,7 @@ __kernel void heavy_compute_kernel(__global const int* a,
         float result = 0.0f;
 
         // Ciclo computazionalmente pesante
-        for (int j = 0; j < 100; ++j) {
+        for (int j = 0; j < 200; ++j) {
             result += sin(val_a + j) * cos(val_b - j);
         }
 

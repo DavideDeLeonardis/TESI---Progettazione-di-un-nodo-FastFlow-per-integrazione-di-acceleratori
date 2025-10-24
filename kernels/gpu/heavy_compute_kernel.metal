@@ -4,7 +4,7 @@ using namespace metal;
 /**
  * @brief Esegue un calcolo computazionalmente intensivo (versione MSL).
  *
- * Per ogni elemento, esegue un ciclo di 100 iterazioni di calcoli
+ * Per ogni elemento, esegue un ciclo di 200 iterazioni di calcoli
  * trigonometrici (sin, cos) per stressare le unità di calcolo.
  *
  * @param a         Puntatore al primo vettore di input [buffer(0)].
@@ -29,7 +29,7 @@ kernel void heavy_compute_kernel(device const int* a [[buffer(0)]],
     float result = 0.0f;
 
     // Ciclo computazionalmente pesante
-    for (int j = 0; j < 100; ++j) {
+    for (int j = 0; j < 200; ++j) {
         result += sin(val_a + j) * cos(val_b - j);
     }
 
