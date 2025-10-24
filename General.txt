@@ -60,8 +60,8 @@ Punti chiave da ricordare:
 
 // COMPILAZIONE E LINKING SU FPGA per ottenere xclbin (in dir Tesi)
    unset XCL_EMULATION_MODE
-   v++ -c -k krnl_deep_pipeline_calculation --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw -o kernels/fpga/krnl_deep_pipeline_calculation.xo kernels/fpga/krnl_deep_pipeline_calculation.cpp
-   v++ -l --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw -o kernels/fpga/krnl_deep_pipeline_calculation.xclbin kernels/fpga/krnl_deep_pipeline_calculation.xo
+   v++ -c -k krnl_heavy_compute --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw -o kernels/fpga/krnl_heavy_compute.xo kernels/fpga/krnl_heavy_compute.cpp
+   v++ -l --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw -o kernels/fpga/krnl_heavy_compute.xclbin kernels/fpga/krnl_heavy_compute.xo
 
    NON CREA IL FILE xrt.run_summary ---- Linking con profiling per vitis_analyzer (vitis_analyzer --classic xrt.run_summary)
       v++ -l --platform xilinx_u50_gen3x16_xdma_5_202210_1 --target hw --profile.data all:all:all -o krnl_vadd.xclbin kernels/krnl_vadd.xo
