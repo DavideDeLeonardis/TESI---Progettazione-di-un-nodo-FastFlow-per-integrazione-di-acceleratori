@@ -2,7 +2,7 @@
 using namespace metal;
 
 /**
- * @brief Esegue la somma elemento per elemento di due vettori (a + b = c).
+ * @brief Esegue la somma elemento per elemento di due vettori.
  *
  * Questa è la versione in Metal Shading Language (MSL) del kernel.
  *
