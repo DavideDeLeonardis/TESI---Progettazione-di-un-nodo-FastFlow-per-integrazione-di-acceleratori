@@ -1,9 +1,7 @@
 # Progettazione di un nodo FastFlow per integrazione di acceleratori
 
-<br>
-Sono disponibili 4 kernel per GPU e FPGA, per CPU è disponibile solo l'operazione polinomiale.
-<br>
-Il testing è fatto per CPU con FF, CPU con OpenMP, GPU con OpenCL, GPU con Metal e FPGA con il kernel polynomial_op.
+
+Sono disponibili 4 kernel per GPU e FPGA, 3 per CPU.
 <br>
 
 ## Su VM Pianosa
