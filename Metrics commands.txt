@@ -14,9 +14,9 @@ Benchmark con N = 10000 (100 task)
    ./build/tesi-exec 10000 100 gpu_opencl kernels/gpu/heavy_compute_kernel.cl
 
    # --- GPU (Metal) ---
-   ./build/tesi-exec 10000 100 gpu_metal kernels/metal/vecAdd.metal
-   ./build/tesi-exec 10000 100 gpu_metal kernels/metal/polynomial_op.metal
-   ./build/tesi-exec 10000 100 gpu_metal kernels/metal/heavy_compute_kernel.metal
+   ./build/tesi-exec 10000 100 gpu_metal kernels/gpu/vecAdd.metal
+   ./build/tesi-exec 10000 100 gpu_metal kernels/gpu/polynomial_op.metal
+   ./build/tesi-exec 10000 100 gpu_metal kernels/gpu/heavy_compute_kernel.metal
 
 Benchmark con N = 1,000,000 (100 task)
    # --- CPU (FastFlow) ---
@@ -30,9 +30,9 @@ Benchmark con N = 1,000,000 (100 task)
    ./build/tesi-exec 1000000 100 gpu_opencl kernels/gpu/heavy_compute_kernel.cl
 
    # --- GPU (Metal) ---
-   ./build/tesi-exec 1000000 100 gpu_metal kernels/metal/vecAdd.metal
-   ./build/tesi-exec 1000000 100 gpu_metal kernels/metal/polynomial_op.metal
-   ./build/tesi-exec 1000000 100 gpu_metal kernels/metal/heavy_compute_kernel.metal
+   ./build/tesi-exec 1000000 100 gpu_metal kernels/gpu/vecAdd.metal
+   ./build/tesi-exec 1000000 100 gpu_metal kernels/gpu/polynomial_op.metal
+   ./build/tesi-exec 1000000 100 gpu_metal kernels/gpu/heavy_compute_kernel.metal
 
 Benchmark con N = 7,449,999 (100 task)
    # --- CPU (FastFlow) ---
@@ -46,9 +46,9 @@ Benchmark con N = 7,449,999 (100 task)
    ./build/tesi-exec 7449999 100 gpu_opencl kernels/gpu/heavy_compute_kernel.cl
 
    # --- GPU (Metal) ---
-   ./build/tesi-exec 7449999 100 gpu_metal kernels/metal/vecAdd.metal
-   ./build/tesi-exec 7449999 100 gpu_metal kernels/metal/polynomial_op.metal
-   ./build/tesi-exec 7449999 100 gpu_metal kernels/metal/heavy_compute_kernel.metal
+   ./build/tesi-exec 7449999 100 gpu_metal kernels/gpu/vecAdd.metal
+   ./build/tesi-exec 7449999 100 gpu_metal kernels/gpu/polynomial_op.metal
+   ./build/tesi-exec 7449999 100 gpu_metal kernels/gpu/heavy_compute_kernel.metal
 
 //
 // VM Pianosa Linux
