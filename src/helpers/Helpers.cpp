@@ -56,17 +56,22 @@ void parse_args(int argc, char *argv[], size_t &N, size_t &NUM_TASKS, std::strin
       exit(EXIT_FAILURE);
    }
 
-   // Se gpu o fpga, e il path del kernel non è stato specificato, imposta
-   // polynomial_op.
+   // Per GPU e FPGA, se non specifico un kernel di default imposta polynomial_op.
    if (device_type == "gpu_opencl" && kernel_path.empty())
       kernel_path = "kernels/gpu/polynomial_op.cl";
-   else if (device_type == "fpga" && kernel_path.empty())
-      kernel_path = "kernels/fpga/krnl_polynomial_op.xclbin";
    else if (device_type == "gpu_metal" && kernel_path.empty())
       kernel_path = "kernels/gpu/polynomial_op.metal";
+   else if (device_type == "fpga" && kernel_path.empty())
+      kernel_path = "kernels/fpga/krnl_polynomial_op.xclbin";
 
-   // Estrae il nome del kernel dal percorso del file, se GPU o FPGA.
+   // Per GPU e FPGA, estraggo il nome del kernel dal percorso specificato.
    if (device_type == "gpu_opencl" || device_type == "fpga" || device_type == "gpu_metal")
+      kernel_name = extractKernelName(kernel_path);
+
+   // Per CPU, se non specifico un kernel imposta polynomial_op, altrimenti lo estrae dal nome.
+   if (kernel_path.empty() && (device_type == "cpu_ff" || device_type == "cpu_omp"))
+      kernel_name = "polynomial_op";
+   else
       kernel_name = extractKernelName(kernel_path);
 }
 
@@ -74,14 +79,15 @@ void parse_args(int argc, char *argv[], size_t &N, size_t &NUM_TASKS, std::strin
  * Helper per stampare la configurazione di esecuzione del programma.
  */
 void print_configuration(size_t N, size_t NUM_TASKS, const std::string &device_type,
-                         const std::string &kernel_path) {
+                         const std::string &kernel_path, const std::string &kernel_name) {
    std::cout << "\nConfiguration: N=" << N << ", NUM_TASKS=" << NUM_TASKS
              << ", Device=" << device_type;
 
+   if (device_type == "cpu_ff" || device_type == "cpu_omp")
+      std::cout << ", Kernel=" << kernel_name;
+
    if (device_type == "gpu_opencl" || device_type == "gpu_metal" || device_type == "fpga")
       std::cout << ", Using " << kernel_path;
-   else
-      std::cout << ", Using kernel: polynomial operation";
 
    std::cout << "\n\n";
 }
@@ -95,10 +101,11 @@ void print_usage(const char *prog_name) {
              << "  NUM_TASKS    : Number of tasks to run (default: 20)\n"
              << "  DEVICE       : 'cpu_ff', 'cpu_omp', 'gpu_opencl', 'gpu_metal' or 'fpga' "
                 "(default: 'cpu_ff').\n"
-             << "  KERNEL_PATH  : If on GPU or FPGA, path to the kernel file "
-                "(.cl, .xclbin or .metal)\n"
-             << "\nExample: " << prog_name
-             << " 16777216 100 gpu_opencl kernels/gpu/polynomial_op.cl\n";
+             << "  KERNEL_PATH  : Path to the kernel file for accelerators (.cl, .xclbin, .metal)\n"
+             << "                 or kernel name for CPU ('vecAdd', 'polynomial_op', etc.)\n"
+             << "\nExample (GPU): " << prog_name
+             << " 16777216 100 gpu_opencl kernels/gpu/heavy_compute_kernel.cl\n"
+             << "Example (CPU): " << prog_name << " 16777216 100 cpu_ff vecAdd\n";
 }
 
 /**
@@ -158,9 +165,8 @@ void print_metrics(size_t N, size_t NUM_TASKS, const std::string &device_type,
       // Tempo medio per completare un singolo task.
       double avg_task_time_ms = metrics.elapsed_s * 1000 / final_count;
 
-      std::cout << ", "
-                   "Kernel=polynomial_operation)\n-------------------------------------------------"
-                   "-----------------\n"
+      std::cout << ", Kernel=" << kernel_name
+                << ")\n------------------------------------------------------------------\n"
                 << "Avg Time per Task: " << avg_task_time_ms << " ms/task\n"
                 << "   (Tempo medio per completare un singolo task in modo sequenziale)\n\n"
                 << "Throughput: " << metrics.throughput << " tasks/sec\n"
