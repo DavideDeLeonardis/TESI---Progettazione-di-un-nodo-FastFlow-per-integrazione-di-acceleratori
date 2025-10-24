@@ -45,24 +45,20 @@ static void compute_heavy(hls::stream<int32_t> &in1_stream, hls::stream<int32_t>
 execute:
    for (int i = 0; i < size; i++) {
 #pragma HLS LOOP_TRIPCOUNT min = c_size max = c_size
-      // Applichiamo la pipeline a questo loop, che processa un elemento
-      // alla volta.
+      // Applichiamo la pipeline a questo loop.
 #pragma HLS PIPELINE
 
-      // Convertiamo in double per le funzioni trigonometriche.
       double val_a = (double)in1_stream.read();
       double val_b = (double)in2_stream.read();
       double result = 0.0;
 
-   // Ciclo computazionalmente pesante (100 iterazioni)
+   // Ciclo computazionalmente pesante (200 iterazioni)
    // Vitis HLS ottimizzerà questo ciclo interno.
    compute_loop:
-      for (int j = 0; j < 100; ++j) {
-         // Usiamo le versioni HLS delle funzioni matematiche.
+      for (int j = 0; j < 200; ++j) {
          result += hls::sin(val_a + j) * hls::cos(val_b - j);
       }
 
-      // Riconvertiamo il risultato finale in int.
       out_stream << (int32_t)result;
    }
 }

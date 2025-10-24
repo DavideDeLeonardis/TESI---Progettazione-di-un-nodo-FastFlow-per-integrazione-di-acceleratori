@@ -74,8 +74,6 @@ execute:
       // to ensure correctness during intermediate additions/subtractions.
       int64_t result = (2 * a2) + (3 * a3) - (4 * b2) + (5 * b5);
 
-      // Cast the final result back to 32-bit before writing to the output
-      // stream.
       out_stream << (int32_t)result;
    }
 }
