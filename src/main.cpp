@@ -25,8 +25,7 @@
  * oggetto Task per ogni richiesta dalla pipeline.
  *
  * !! Stiamo eseguendo i task in parallelo sull'acceleratore, ma stiamo serializzando la
- * !! finalizzazione e il download, e ciò che ci permette di riutilizzare lo stesso buffer di
- * !! output.
+ * !! finalizzazione e il download, e ciò ci permette di riutilizzare lo stesso buffer di output.
  */
 class Emitter : public ff_node {
  public:
@@ -133,12 +132,12 @@ int main(int argc, char *argv[]) {
    // default per GPU e FPGA.
    parse_args(argc, argv, N, NUM_TASKS, device_type, kernel_path, kernel_name);
 
-   print_configuration(N, NUM_TASKS, device_type, kernel_path);
+   print_configuration(N, NUM_TASKS, device_type, kernel_path, kernel_name);
 
    // In base al device scelto, esegue la parallelizzazione dei task su CPU
    // multicore tramite ff o la pipeline con offloading su GPU/FPGA.
    if (device_type == "cpu_ff")
-      elapsed_ns = executeCpu_FF_Tasks(N, NUM_TASKS, final_count);
+      elapsed_ns = executeCpu_FF_Tasks(N, NUM_TASKS, kernel_name, final_count);
 
 #ifdef __APPLE__
    else if (device_type == "gpu_opencl") {
@@ -153,7 +152,7 @@ int main(int argc, char *argv[]) {
    }
 #else
    else if (device_type == "cpu_omp") {
-      elapsed_ns = executeCpu_OMP_Tasks(N, NUM_TASKS, final_count);
+      elapsed_ns = executeCpu_OMP_Tasks(N, NUM_TASKS, kernel_name, final_count);
 
    } else if (device_type == "fpga") {
       auto accelerator = std::make_unique<FpgaAccelerator>(kernel_path, kernel_name);
