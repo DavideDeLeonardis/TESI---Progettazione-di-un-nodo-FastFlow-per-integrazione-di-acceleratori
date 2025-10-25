@@ -48,6 +48,8 @@ class BufferManager {
          // ! richiedono ~30MB l'uno, un set di buffer richiede quindi 90MB => sto già allocando
          // ! POOL_SIZE x 90 = 270MB di VRAM, se aumentassi il pool size rischierei di rallentare
          // ! l'OS o potrebber fallire l'alloc su FPGA, inoltre non aumenterebbe il throughput.
+         // ! Se usassi POOL_SIZE = 100, dovrei allocare 9GB di VRAM su FPGA!
+         // ! Con POOL_SIZE = 3 ho un buon compromesso fra performance e minimo utilizzo di memoria.
    std::vector<BufferSet> buffer_pool_;
    std::queue<size_t> free_buffer_indices_;
    std::mutex pool_mutex_;
