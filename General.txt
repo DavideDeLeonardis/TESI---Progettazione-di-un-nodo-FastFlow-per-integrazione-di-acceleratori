@@ -587,3 +587,69 @@ Soluzione Ambientale (Meno Praticabile):
 Rimuovere la VM: Eseguire il codice su un'installazione Linux "bare metal". Questo ridurrà drasticamente l'overhead introdotto dalla virtualizzazione.
 
 Hardware Migliore: Usare hardware con una connessione più veloce (es. CXL) o memoria unificata (come il suo Mac M2, che infatti ha un overhead molto più basso).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Eccellente! Il fatto che la compilazione sia terminata in 3 minuti e 39 secondi (invece di 15+ ore) è la prova definitiva che la nostra correzione al design del kernel era corretta.
+
+Quelli che sta vedendo sono i messaggi informativi di Vitis HLS (High-Level Synthesis). Non sono errori, ma un report dettagliato su come il compilatore ha tradotto il suo codice C++ in un'architettura hardware.
+
+Sta leggendo la "pagella" del suo kernel, e ci sta dicendo cose molto interessanti. Analizziamola riga per riga.
+
+Spiegazione dei Messaggi "INFO" Chiave
+In HLS, l'obiettivo è creare una "pipeline" (una catena di montaggio) efficiente. La metrica più importante è l'II (Initiation Interval), che significa: "Quanti cicli di clock devo aspettare prima di poter inserire un nuovo pezzo di dati nella catena di montaggio?".
+
+Un II=1 è il risultato perfetto: significa che la catena può accettare un nuovo dato a ogni singolo ciclo di clock.
+
+1. Le Pipeline Semplici (load_input e store_result)
+INFO: [v++ 204-61] Pipelining loop 'mem_rd'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 3...
+INFO: [v++ 204-61] Pipelining loop 'mem_wr'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 3...
+Cosa significa: HLS ha analizzato i suoi loop load_input e store_result. Ha provato a ottenere un II=1 (Target II = 1) ed ci è riuscito (Final II = 1).
+
+Traduzione: L'hardware che carica e scarica i dati è perfetto. Può leggere e scrivere un dato a ogni ciclo di clock. Il Depth = 3 significa che la "mini-pipeline" per questa operazione è lunga 3 stadi.
+
+2. La Pipeline Complessa (compute_heavy) - Il Cuore dell'Analisi
+INFO: [v++ 204-61] Pipelining loop 'compute_loop'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 7, Depth = 67, loop 'compute_loop'
+Questo è il risultato più importante e interessante di tutto il log.
+
+Cosa significa: HLS ha analizzato il suo ciclo interno di 200 iterazioni (compute_loop).
+
+Final II = 7: Questo è il dato cruciale. HLS ha determinato che l'operazione result += hls::sin(val_a + j) * hls::cos(val_b - j); è troppo complessa per essere eseguita in un singolo ciclo di clock. Ha calcolato che servono 7 cicli di clock per completare una singola iterazione di quel ciclo.
+
+Depth = 67: La catena di montaggio hardware che HLS ha costruito per calcolare sin * cos è profonda 67 stadi.
+
+3. L'Avviso ("Constraint Status")
+INFO: [v++ 200-790] **** Loop Constraint Status: All loop constraints were NOT satisfied.
+Cosa significa: Questo non è un errore. È direttamente collegato al punto 2. Per impostazione predefinita, HLS prova sempre a ottenere II=1 per qualsiasi loop con #pragma HLS PIPELINE.
+
+Traduzione: HLS le sta dicendo: "Ehi, ho provato a raggiungere l'obiettivo di II=1 per il compute_loop, ma non ci sono riuscito perché il calcolo era troppo pesante. Il miglior risultato che ho potuto ottenere è stato un II=7."
+
+4. Stima della Frequenza
+INFO: [v++ 200-789] **** Estimated Fmax: 411.00 MHz
+Cosa significa: HLS stima che il design hardware che ha creato possa funzionare a una frequenza massima di 411 MHz, che è un ottimo risultato.
+
+Conclusione: Cosa Ha Ottenuto?
+Con il design precedente (quello bloccato per 15 ore), lei stava chiedendo a HLS di fare 200 * (sin + cos) in 1 solo ciclo di clock.
+
+Con il nuovo design corretto, lei sta chiedendo a HLS di creare una pipeline per eseguire il ciclo di 200 iterazioni. HLS le ha risposto: "Ok, ho creato la pipeline. Ogni iterazione mi costa 7 cicli di clock."
+
+Questo significa che il suo stadio compute_heavy impiegherà circa 200 iterazioni * 7 cicli/iterazione = 1400 cicli di clock per processare un singolo elemento i. Questo è esattamente ciò che voleva: ha creato con successo un kernel compute-bound (limitato dal calcolo) e sintetizzabile, e ora ha la misura esatta della sua complessità (II=7).
