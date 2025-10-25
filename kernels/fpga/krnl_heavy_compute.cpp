@@ -45,8 +45,6 @@ static void compute_heavy(hls::stream<int32_t> &in1_stream, hls::stream<int32_t>
 execute:
    for (int i = 0; i < size; i++) {
 #pragma HLS LOOP_TRIPCOUNT min = c_size max = c_size
-      // Applichiamo la pipeline a questo loop.
-#pragma HLS PIPELINE
 
       double val_a = (double)in1_stream.read();
       double val_b = (double)in2_stream.read();
@@ -56,6 +54,7 @@ execute:
    // Vitis HLS ottimizzerà questo ciclo interno.
    compute_loop:
       for (int j = 0; j < 200; ++j) {
+#pragma HLS PIPELINE // Applichiamo la pipeline al LOOP INTERNO
          result += hls::sin(val_a + j) * hls::cos(val_b - j);
       }
 
